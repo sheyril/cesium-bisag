@@ -1,2 +1,15 @@
 node_modules
 dist
+RasterStore
+misc
+VectorStore
+xmljson.json
+check.js
+indiaData
+misc
+sqlscripts
+Stores
+testSizeForIndia
+.progress
+prepareContour.js
+terrain

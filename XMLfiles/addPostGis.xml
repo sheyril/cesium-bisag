@@ -1,0 +1,30 @@
+<dataStore>
+        <name>datastore__name</name>
+        <description>Adds given PostGIS datastore in geoserver</description>
+        <type>PostGIS</type>
+        <enabled>true</enabled>
+        <connectionParameters>
+          <entry key="schema">schema__name</entry>
+          <entry key="Estimated extends">true</entry>
+          <entry key="Max open prepared statements">50</entry>
+          <entry key="fetch size">1000</entry>
+          <entry key="encode functions">false</entry>
+          <entry key="validate connections">true</entry>
+          <entry key="Expose primary keys">false</entry>
+          <entry key="Support on the fly geometry simplification">false</entry>
+          <entry key="Connection timeout">20</entry>
+          <entry key="create database">false</entry>
+          <entry key="preparedStatements">false</entry>
+          <entry key="database">db__name</entry>
+          <entry key="port">port__name</entry>
+          <entry key="passwd">pass__name</entry>
+          <entry key="min connections">1</entry>
+          <entry key="host">host__name</entry>
+          <entry key="Loose bbox">true</entry>
+          <entry key="dbtype">postgis</entry>
+          <entry key="max connections">10</entry>
+          <entry key="Test while idle">false</entry>
+          <entry key="user">user__name</entry>
+        </connectionParameters>
+        <__default>false</__default>
+</dataStore>

@@ -4,12 +4,25 @@
     const compression = require('compression');
     const path = require('path');
     const fs = require('fs');
+    const cors = require('cors');
+
     const webpack = require('webpack');
     const webpackDevMiddleware = require('webpack-dev-middleware');
-
     const config = require('./webpack.config.js');
     const compiler = webpack(config);
 
+    const layerProcessing = require('./layerProcessing');
+    const convention = require('./convention');
+    const geoserverConnection = require('./geoserverRequests');
+    const postGisOperations = require('./postGisOperations');
+
+    let geoserverLink = 'http://localhost:8080';
+
+    let db  = new postGisOperations.database(convention.defaultBaseDatabase[0], convention.defaultBaseDatabase[1], convention.defaultBaseDatabase[2], convention.defaultBaseDatabase[3], convention.defaultBaseDatabase[4]);
+    let schema = new postGisOperations.schema(db, convention.defaultSchema[0]);
+    let geoserverConnectionObj = new geoserverConnection.geoserverConnection(convention.defaultGeoserverConnection[0], convention.defaultGeoserverConnection[1], convention.defaultGeoserverConnection[2], schema);
+
+    console.log(db, schema, geoserverConnectionObj);
 
     let app = express();
     app.use(webpackDevMiddleware(compiler, {
@@ -17,13 +30,9 @@
         })
     );
 
-    // app.use(express.static(path.resolve(__dirname, 'dist')));
-    // app.use(express.static(__dirname));
-    // console.log(__dirname);
     app.use(compression());
-
-    app.get('/geoserver/*/wms', function(req, res)  {
-        let geoserverLink = 'http://localhost:8080';
+    app.use(cors());
+    app.get('/geoserver/*/wms', function(req, res, next)  {
         // console.log('got wms req');
         try {
             request.get(geoserverLink+req.url, {encoding:'binary'}, function(error, response)   {
@@ -34,58 +43,43 @@
         catch(e)    {
             console.log(e);
         }
-        //Catch errors in the error handler
+        next();
     });
 
+    app.get(/\/geoserver\/generate\/contours/, function(req, res, next)  {
+        try{
+            let queries = req.query;
+            console.log('got request');
+            layerProcessing.publishContourAfterGenerating('Rasters:'+queries.layers, queries.bands, queries.interval, geoserverConnectionObj)
+                .then(value => {
+                    console.log('got here man before writehead');
+                    res.writeHead(200, {
+                        'Content-Type':'text/plain',
+                        'Access-Control-Allow-Origin' : '*'
+                    });
+                    console.log('heyo finally');
+                    res.end('Contours:'+path.basename(value.vectorPath, '.shp'));
+                    return value;
+                })
+                .then(value => {
+                    layerProcessing.deleteVectorFromSystem(value.vectorPath);
+                })
+                .catch(err => {
+                    console.log('in error')
+                    // res.writeHead(500);
+                    console.log(err);
+                    next();
+                })
 
-    app.get('/myFile*', (req, res) => {
-        console.log('intercepted request');
-        res.writeHead(200, {'Content-Type': 'application/geo+json'});
-        fs.readFile('/home/orange/Documents/myFile.geojson', (err, data) => {
-            if(err)
-                throw err;
-            else    {
-                res.write(data);
-                res.end();
-            }
-        });
-    });
-
-    const yargs = require('yargs').options({
-        'port' : {
-            'default' : 8585,
-            'description' : 'Port to listen on.'
-        },
-        'public' : {
-            'type' : 'boolean',
-            'description' : 'Run a public server that listens on all interfaces.'
-        },
-        'upstream-proxy' : {
-            'description' : 'A standard proxy server that will be used to retrieve data.  Specify a URL including port, e.g. "http://proxy:8000".'
-        },
-        'bypass-upstream-proxy-hosts' : {
-            'description' : 'A comma separated list of hosts that will bypass the specified upstream_proxy, e.g. "lanhost1,lanhost2"'
-        },
-        'help' : {
-            'alias' : 'h',
-            'type' : 'boolean',
-            'description' : 'Show this help.'
         }
-    });
-    var argv = yargs.argv;
-
-    if (argv.help) {
-        return yargs.showHelp();
-    }
-
-    var server = app.listen(argv.port, argv.public ? undefined : 'localhost', function() {
-        if (argv.public) {
-            console.log('Cesium development server running publicly.  Connect to http://localhost:%d/', server.address().port);
-        } else {
-            console.log('Cesium development server running locally.  Connect to http://localhost:%d/', server.address().port);
+        catch(e){
+            console.log('got error: ', e);
+            next();
         }
     });
 
+    server = app.listen(8585);
+    console.log('Cesium server running locally on http://localhost:8585/');
 
     server.on('error', function (e) {
         if (e.code === 'EADDRINUSE') {
@@ -120,3 +114,18 @@
     });
 
 })();
+
+
+// fs.readFile(value.outpath, (err, data) => {
+                    //     if(err) {
+                    //         console.log(err);
+                    //         next();
+                    //     }
+                    //     else {
+                    //         console.log('in final');
+                    //         // res.writeHead(200, {'Content-Type':'application/json'});
+                    //         res.send(data);
+                    //         res.end();
+                    //         next();
+                    //     }
+                    // })

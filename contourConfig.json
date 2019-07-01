@@ -1,0 +1,22 @@
+{
+    "layers" : [{
+        "name" : "layerName",
+        "inputLayerPath" : "path",
+        "outLayerDirectoryPath" : "path",
+        "bands" : 1,
+        "intervals" : [
+            10, 100, 1000
+        ],
+        "tileSize" : "256"
+    },
+    {
+        "name" : "layerName",
+        "inputLayerPath" : "path",
+        "outLayerDirectoryPath" : "path",
+        "bands" : 1,
+        "intervals" : [
+            10, 100, 1000
+        ],
+        "tileSize" : "256"
+    }]
+}

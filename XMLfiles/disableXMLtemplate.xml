@@ -1,0 +1,24 @@
+<dataStore>
+        <name>dataStore__Name</name>
+        <description>Disables a given store in geoserver</description>
+        <type>PostGIS</type>
+        <enabled>false</enabled>
+        <connectionParameters>
+              <entry key="host">localhost</entry>
+              <entry key="port">5432</entry>
+              <entry key="database">gisdata</entry>
+              <entry key="schema">public</entry>
+              <entry key="user">postgres</entry>
+              <entry key="passwd">Firedragon12</entry>
+              <entry key="dbtype">postgis</entry>
+              <entry key="validate connections">true</entry>
+              <entry key="Connection timeout">20</entry>
+              <entry key="min connections">1</entry>
+              <entry key="max connections">10</entry>
+              <entry key="Loose bbox">true</entry>
+              <entry key="fetch size">1000</entry>
+              <entry key="Max open prepared statements">50</entry>
+              <entry key="Estimated extends">true</entry>
+        </connectionParameters>
+        <__default>false</__default>
+</dataStore>
