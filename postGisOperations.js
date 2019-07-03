@@ -22,6 +22,10 @@ schema.prototype.sendFeatureToDB = function(shapeFilePath, shapeFileName, SRID='
     return sh(spCom + ' | ' + this.psqlCommand);
 }
 
+schema.prototype.runSqlFile = function(filePath)    {
+    return sh(this.psqlCommand + ' -f ' + filePath);
+}
+
 schema.prototype.deleteFeature = function(fileNameInTable) {
 
     return new Promise((resolve, reject) => {

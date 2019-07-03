@@ -100,28 +100,31 @@ class QGISwrapper:
         file_writer.writeRaster(pipe, width, height, extent, rlayer.crs())
         # self.qgs.exitQgis();
 
-    def prepareContours(self,tilesFolder, outputFolder, layerName, srid, bands, interval):
-        # self.qgs.initQgis();
+    def prepareContours(self,tilesFolder, outputFolder, layerName, srid, bands, intervals):
         from pathlib import Path;
         import glob;
         p = Path(tilesFolder);
         q = p / '*.tif';
         allRasters = glob.glob(str(q));
-        for rasterPath in range(0, len(allRasters)):
-            layer  = QgsRasterLayer(allRasters[rasterPath], 'abc');
-            extent = layer.extent();
-            xMin = extent.xMinimum();
-            yMin = extent.yMinimum();
-            xMax = extent.xMaximum();
-            yMax = extent.yMaximum();
-            outLayerName = '_' + str(interval) + '_' + str(xMin) + '_' + str(xMax) + '_' + str(yMin) + '_' + str(yMax) + '_' + layerName + '.shp';
-            outLayerPath = Path(outputFolder) / outLayerName;
-            self.generateContour(allRasters[rasterPath], str(outLayerPath), bands, interval);
+        for interval in intervals:
+            for rasterPath in range(0, len(allRasters)):
+                layer  = QgsRasterLayer(allRasters[rasterPath], 'abc');
+                extent = layer.extent();
+                xMin = extent.xMinimum();
+                yMin = extent.yMinimum();
+                xMax = extent.xMaximum();
+                yMax = extent.yMaximum();
+                outLayerName = '_' + str(interval) + '_' + str(xMin) + '_' + str(xMax) + '_' + str(yMin) + '_' + str(yMax) + '_' + layerName + '.shp';
+                outLayerPath = Path(outputFolder) / outLayerName;
+                print(str(outLayerPath));
+                self.generateContour(allRasters[rasterPath], str(outLayerPath), bands, interval);
 
+    # def prepareMultipleLayersContours(self, )
 
 method = sys.argv[1];
 myQgs = QGISwrapper();
 myQgs.startApplication();
+# myQgs.prepareContour("/home/orange/Desktop/3D_DEM_DATA/tiles", "/home/orange/Desktop/3D_DEM_DATA/allShp", "myContours", 'EPSG:4326', 1, 100);
 
 if method == "contour":
     inp = sys.argv[2];
@@ -140,12 +143,18 @@ elif method == "pseudocolor":
     outp = sys.argv[3];
     myQgs.generatePseudoColor(inp, outp);
 elif method == "prepareContour":
+    print('hey');
     inpfold = sys.argv[2];
     outpfold = sys.argv[3];
     lName = sys.argv[4];
     srid = sys.argv[5];
     bands = sys.argv[6];
-    interval = sys.argv[7];
-    myQgs.prepareContour(inpfold, outpfold, lName, srid, bands, interval);
+
+    # print(len(sys.argv));
+    length = len(sys.argv);
+    intervals = [];
+    for i in range(7, length):
+        intervals.append(int(sys.argv[i]));
+    myQgs.prepareContours(inpfold, outpfold, lName, srid, bands, intervals);
 
 myQgs.endApplication();

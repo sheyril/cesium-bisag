@@ -36,3 +36,5 @@ exports.geoserverRootDirectory = '/home/orange/geoserver/';
 exports.defaultBaseDatabase = ['localhost', '5432', 'CesiumBisag', 'postgres', 'Firedragon12'];
 exports.defaultGeoserverConnection = ['http://localhost:8080/geoserver/', 'admin', 'geoserver', 'public'];
 exports.defaultSchema = ['public'];
+
+exports.retilingTemporaryFolder = '/home/orange/Desktop/3D_DEM_DATA/tiles/';

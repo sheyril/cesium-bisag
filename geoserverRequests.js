@@ -9,6 +9,7 @@ const WMSCapabilities = require('wms-capabilities');
 const path = require('path');
 const postGisSchema = require('./postGisOperations');
 const sh = require('./useCommandLine').sh;
+const gdalRetile = require('./useCommandLine').gdalRetile;
 const rimraf = require('rimraf');
 
 class geoserverConnectionError extends Error {}
@@ -65,19 +66,19 @@ geoserverConnection.prototype.createJdbcMapping = function(layerName, srid='EPSG
 	});
 }
 
-geoserverConnection.prototype.gdalRetile = function(infilepath, layerName, targetDir, levels='2', srid='EPSG:4326', tileDim='1024')	{
-	return new Promise((resolve, reject) => {
-		// let layerName = path.basename(infilepath, '.tif');
-		console.log('gdal_retile.py -r bilinear -co "TFW=YES" -ps ' + tileDim + ' ' + tileDim + ' -s_srs ' + srid + ' -of GTiff -ot Byte -levels ' + levels + ' -targetDir ' + targetDir + ' ' + infilepath);
-		sh('gdal_retile.py -r bilinear -co "TFW=YES" -ps ' + tileDim + ' ' + tileDim + ' -s_srs ' + srid + ' -of GTiff -ot Byte -levels ' + levels + ' -targetDir ' + targetDir + ' ' + infilepath)
-			.then(value => {
-				resolve({layerName: layerName, tilesDirectory : targetDir});
-			})
-			.catch(err => {
-				reject(err);
-			});
-	});
-}
+// geoserverConnection.prototype.gdalRetile = function(infilepath, layerName, targetDir, levels='2', srid='EPSG:4326', tileDim='1024')	{
+// 	return new Promise((resolve, reject) => {
+// 		// let layerName = path.basename(infilepath, '.tif');
+// 		console.log('gdal_retile.py -r bilinear -co "TFW=YES" -ps ' + tileDim + ' ' + tileDim + ' -s_srs ' + srid + ' -of GTiff -ot Byte -levels ' + levels + ' -targetDir ' + targetDir + ' ' + infilepath);
+// 		sh('gdal_retile.py -r bilinear -co "TFW=YES" -ps ' + tileDim + ' ' + tileDim + ' -s_srs ' + srid + ' -of GTiff -ot Byte -levels ' + levels + ' -targetDir ' + targetDir + ' ' + infilepath)
+// 			.then(value => {
+// 				resolve({layerName: layerName, tilesDirectory : targetDir});
+// 			})
+// 			.catch(err => {
+// 				reject(err);
+// 			});
+// 	});
+// }
 
 // NOTE: have to create meta table first
 geoserverConnection.prototype.addJdbcTableToPostgis = function(mappingFilePath, layerName, tileDirectory, levels='2', srid='EPSG:4326')	{
@@ -225,35 +226,29 @@ geoserverConnection.prototype.createJdbcCoverageFromRaster = function(layerPath,
 	return new Promise((resolve, reject) => {
 		layerName = this.layerNameConvention(layerName);
 		console.log(layerPath, layerName, workspace, tileDir, levels, srid, tileSize);
-		try {
-
-		} catch (e) {
-
-		} finally {
-
-		}
-		this.gdalRetile(layerPath, layerName, tileDir, levels, srid, tileSize)
-		    .then(value => {
-		        return this.createJdbcMapping(value.layerName, srid, '1');
-		    })
-		    .then(value => {
-		        // console.log(tileDir);
-		        return this.addJdbcTableToPostgis(value.outpath, value.layerName, tileDir, levels, srid);
-		    })
-		    .then(value => {
-		        console.log(value);
-		        return this.addJdbcStoreFromPostgisToGeoserver(workspace, value.layerName, value.outpath);
-		    })
+		gdalRetile(layerPath, layerName, tileDir, levels, srid, tileSize)
+			.then(value => {
+				return this.createJdbcMapping(value.layerName, srid, '1');
+			})
+			.then(value => {
+				// console.log(tileDir);
+				return this.addJdbcTableToPostgis(value.outpath, value.layerName, tileDir, levels, srid);
+			})
+			.then(value => {
+				console.log(value);
+				return this.addJdbcStoreFromPostgisToGeoserver(workspace, value.layerName, value.outpath);
+			})
 			.then(value => {
 				return this.publishCoverageFromDataStore(layerName, workspace, value.storeName);
 			})
 			.then(value => {
 				// resolve({storeName: value.storeName, layerName : value.layerName});
 			})
-	    	.catch(err =>{
-		        reject(err);
-		    });
+			.catch(err =>{
+				reject(err);
+			});
 	});
+
 }
 
 geoserverConnection.prototype.addNamespace = function(namespace)	{
@@ -396,6 +391,7 @@ geoserverConnection.prototype.publishFeatureFromDataStore = function(featureName
 			if(err)
 				reject(err);
 			else {
+				console.log(options);
 				resolve({resp: resp, body: body});
 			}
 		})
@@ -438,7 +434,7 @@ geoserverConnection.prototype.deleteFeature = function(passedLayer)	{
     	};
     	request(options, (err, resp, body) => {
     		if(!err)	{
-    			resolve(this.schema.deleteFeature(featureName));
+				resolve(this.schema.deleteFeature(featureName));
     		}
     		else
     			reject(err);
