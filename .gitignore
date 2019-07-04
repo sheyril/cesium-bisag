@@ -13,3 +13,5 @@ testSizeForIndia
 .progress
 prepareContour.js
 terrain
+sqlscripts/addToMeta.sql
+sqlscripts/createmeta.sql
