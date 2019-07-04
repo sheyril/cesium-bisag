@@ -11,37 +11,66 @@ function generateTiledContours(inJsonFile)    {
             let jsonLayerObj = JSON.parse(data);
             jsonLayerObj.layer.layerName = convention.layerNameConvention(jsonLayerObj.layer.layerName);
             let layer = jsonLayerObj.layer;
-            useCommandLine.gdalRetile(layer.inputLayerPath, layer.layerName, convention.retilingTemporaryFolder, layer.levels, layer.srid, layer.tileSize)
-                .then(value => {
-                    console.log('got in then');
-                    rimraf(path.join(layer.outLayerDirectoryPath, '*'), (err, data) => {
-                        if(err) {
-                            reject(err);
-                            return;
-                        }
-                        else {
-                            let intervalString = '';
-                            for(interval of layer.intervals)
-                                intervalString += interval + ' ';
-                            useCommandLine.sh('python3 ./QGISprocessing.py prepareContour ' + value.tilesDirectory + ' ' + layer.outLayerDirectoryPath + ' '+ layer.layerName + ' ' + layer.srid +' '+ layer.bands + ' ' + intervalString)
-                                .then(value => {
-                                    console.log('completed generation: ', new Date());
-                                    let files = fs.readdirSync(layer.outLayerDirectoryPath);
-                                    console.log(files.length);
-                                    resolve(jsonLayerObj);
-                                })
-                                .catch(err => {
-                                    reject(err);
-                                });
-                        }
-                    });
-                })
-                .catch(err => {
+            rimraf(path.join(layer.outLayerDirectoryPath, '*'), (err, data) => {
+                if(err) {
                     reject(err);
-                });
-        });
+                    return;
+                }
+                else {
+                    console.log('python3 ./QGISprocessing.py tileThemHere ' + layer.inputLayerPath + ' ' + layer.outLayerDirectoryPath + ' ' + layer.layerName + ' ' + layer.bands + ' ' + layer.intervals + ' ' + layer.tileSize);
+                    useCommandLine.sh('python3 ./QGISprocessing.py tileThemHere ' + layer.inputLayerPath + ' ' + layer.outLayerDirectoryPath + ' ' + layer.layerName + ' ' + layer.bands + ' ' + layer.intervals + ' ' + layer.tileSize)
+                        .then(value => {
+                            console.log('completed generation: ', new Date());
+                            let files = fs.readdirSync(layer.outLayerDirectoryPath);
+                            console.log(files.length);
+                            resolve(jsonLayerObj);
+                        })
+                        .catch(err => {
+                            reject(err);
+                        });
+                }
+            });
+        })
     });
 }
+
+// function generateTiledContours(inJsonFile)    {
+//     return new Promise((resolve, reject) => {
+//         fs.readFile(inJsonFile, (err, data) => {
+//             let jsonLayerObj = JSON.parse(data);
+//             jsonLayerObj.layer.layerName = convention.layerNameConvention(jsonLayerObj.layer.layerName);
+//             let layer = jsonLayerObj.layer;
+//             useCommandLine.gdalRetile(layer.inputLayerPath, layer.layerName, convention.retilingTemporaryFolder, layer.levels, layer.srid, layer.tileSize)
+//                 .then(value => {
+//                     console.log('got in then');
+//                     rimraf(path.join(layer.outLayerDirectoryPath, '*'), (err, data) => {
+//                         if(err) {
+//                             reject(err);
+//                             return;
+//                         }
+//                         else {
+//                             let intervalString = '';
+//                             for(interval of layer.intervals)
+//                                 intervalString += interval + ' ';
+//                             useCommandLine.sh('python3 ./QGISprocessing.py prepareContour ' + value.tilesDirectory + ' ' + layer.outLayerDirectoryPath + ' '+ layer.layerName + ' ' + layer.srid +' '+ layer.bands + ' ' + intervalString)
+//                                 .then(value => {
+//                                     console.log('completed generation: ', new Date());
+//                                     let files = fs.readdirSync(layer.outLayerDirectoryPath);
+//                                     console.log(files.length);
+//                                     resolve(jsonLayerObj);
+//                                 })
+//                                 .catch(err => {
+//                                     reject(err);
+//                                 });
+//                         }
+//                     });
+//                 })
+//                 .catch(err => {
+//                     reject(err);
+//                 });
+//         });
+//     });
+// }
 
 // function prepareContour()   {
 //     return new Promise((resolve, reject) => {

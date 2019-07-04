@@ -6,6 +6,8 @@ from PyQt5.QtGui import QColor;
 
 from qgis.analysis import QgsNativeAlgorithms;
 import sys;
+from pathlib import Path;
+import glob;
 
 #sys.argv store the arguments, first argument is file name that was run
 #convention: argv[1]:processName, then all the parameters in order defined in function
@@ -101,8 +103,6 @@ class QGISwrapper:
         # self.qgs.exitQgis();
 
     def prepareContours(self,tilesFolder, outputFolder, layerName, srid, bands, intervals):
-        from pathlib import Path;
-        import glob;
         p = Path(tilesFolder);
         q = p / '*.tif';
         allRasters = glob.glob(str(q));
@@ -119,13 +119,45 @@ class QGISwrapper:
                 print(str(outLayerPath));
                 self.generateContour(allRasters[rasterPath], str(outLayerPath), bands, interval);
 
+    def ContoursUsingClip(self, inpLayer, outputFolder, layerName, bands, interval, tileSize):
+        import os;
+        layer = QgsRasterLayer(inpLayer);
+        self.generateContour(inpLayer, '/home/orange/Desktop/3D_DEM_DATA/test.shp', bands, interval);
+        pixelSizeX = layer.rasterUnitsPerPixelX();
+        pixelSizeY = layer.rasterUnitsPerPixelY();
+        #tileSize * pixelSizeX gives disp in x direc
+        extent = layer.extent();
+        xMin = extent.xMinimum();
+        yMin = extent.yMinimum();
+        xMax = extent.xMaximum();
+        yMax = extent.yMaximum();
+        p = Path(outputFolder);
+        x = xMin;
+        while x < xMax:
+        # for x in range(xMin, xMax, pixelSizeX*tileSize):
+            nextX = x + pixelSizeX*tileSize;
+            if(nextX > xMax):
+                nextX = xMax;
+            y = yMin;
+            # for y in range(yMin, yMax, pixelSizeY*tileSize):
+            while y < yMax:
+                nextY = y + pixelSizeY*tileSize;
+                if(nextY > yMax):
+                    nextY = yMax;
+                outLayerName = '_' + str(interval) + '_' + str(x) + '_' + str(nextX) + '_' + str(y) + '_' + str(nextY)  + '_' + layerName + '.shp';
+                outLayerPath = p / outLayerName;
+                outLayerPath = str(outLayerPath);
+                os.system('ogr2ogr -f \"ESRI Shapefile\" -clipsrc ' + str(x) + ' ' + str(y) + ' ' + str(nextX) + ' ' + str(nextY) + ' ' + outLayerPath + ' /home/orange/Desktop/3D_DEM_DATA/test.shp');
+                y = nextY;
+            x = nextX;
+                # os.system('ogr2ogr -f \"ESRI Shapefile\" -clipsrc ' + x + ' ' + y + ' ' + nextX + ' ' + nextY + ' ' + outLayerName + ' home/orange/Desktop/3D_DEM_DATA/test.shp');
     # def prepareMultipleLayersContours(self, )
 
 method = sys.argv[1];
 myQgs = QGISwrapper();
 myQgs.startApplication();
 # myQgs.prepareContour("/home/orange/Desktop/3D_DEM_DATA/tiles", "/home/orange/Desktop/3D_DEM_DATA/allShp", "myContours", 'EPSG:4326', 1, 100);
-
+# myQgs.ContoursUsingClip('/home/orange/Desktop/3D_DEM_DATA/_22_92.tif', '/home/orange/Desktop/3D_DEM_DATA/allShp', '_my_contours', 1, 100, 1024);
 if method == "contour":
     inp = sys.argv[2];
     outp = sys.argv[3];
@@ -149,12 +181,20 @@ elif method == "prepareContour":
     lName = sys.argv[4];
     srid = sys.argv[5];
     bands = sys.argv[6];
-
-    # print(len(sys.argv));
     length = len(sys.argv);
     intervals = [];
     for i in range(7, length):
         intervals.append(int(sys.argv[i]));
     myQgs.prepareContours(inpfold, outpfold, lName, srid, bands, intervals);
-
+elif method == "tileThemHere":
+    inplayer = sys.argv[2];
+    outpfold = sys.argv[3];
+    lName = sys.argv[4];
+    bands = sys.argv[5];
+    interval = sys.argv[6];
+    tileSize = sys.argv[7];
+    interval = int(interval);
+    bands = int(bands);
+    tileSize = int(tileSize);
+    myQgs.ContoursUsingClip(inplayer, outpfold, lName, bands, interval, tileSize);
 myQgs.endApplication();

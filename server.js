@@ -6,6 +6,7 @@
     const fs = require('fs');
     const cors = require('cors');
 
+
     const webpack = require('webpack');
     const webpackDevMiddleware = require('webpack-dev-middleware');
     const config = require('./webpack.config.js');
@@ -17,12 +18,6 @@
     const postGisOperations = require('./postGisOperations');
 
     let geoserverLink = 'http://localhost:8080';
-
-    let db  = new postGisOperations.database(convention.defaultBaseDatabase[0], convention.defaultBaseDatabase[1], convention.defaultBaseDatabase[2], convention.defaultBaseDatabase[3], convention.defaultBaseDatabase[4]);
-    let schema = new postGisOperations.schema(db, convention.defaultSchema[0]);
-    let geoserverConnectionObj = new geoserverConnection.geoserverConnection(convention.defaultGeoserverConnection[0], convention.defaultGeoserverConnection[1], convention.defaultGeoserverConnection[2], schema);
-
-    console.log(db, schema, geoserverConnectionObj);
 
     let app = express();
     app.use(webpackDevMiddleware(compiler, {
@@ -46,13 +41,56 @@
         next();
     });
 
+    app.get(/\/geoserver\/tiledcontours/, function(req, res, next) {
+        try {
+            let query = req.query;
+            /*
+                query structure: min_x, min_y, max_x, max_y, layer, interval
+            */
+            let database  = new postGisOperations.database(convention.defaultBaseDatabase[0], convention.defaultBaseDatabase[1], 'gisdata', convention.defaultBaseDatabase[3], convention.defaultBaseDatabase[4]);
+
+            console.log(query);
+            const initOptions = {
+                schema : [query.layer]
+            };
+            // let sqlQuery = 'SELECT tiledname FROM ' + query.layer + ' WHERE (min_x >= ' + query.min_x + '  AND min_x <= ' + query.max_x + ' AND min_y >= ' + query.min_y + ' AND min_y <= ' + query.max_y + ' AND interval_length = ' + query.interval;
+            // let sqlQuery = 'SELECT tiledname FROM ' + query.layer + ' WHERE ((min_x >= ' + query.min_x + ' AND min_x <= ' + query.max_x + ') OR (max_x >= ' + query.min_x + ' AND max_x <= ' query.max_x + ')) AND ((min_y >= ' + query.min_y + ' AND min_y <= ' + query.max_y + ') OR (max_y >= ' + query.min_y + ' AND max_y <= ' query.max_y + '));
+            let xQuery = '((min_x >= ' + query.min_x + ' AND min_x <= ' + query.max_x  + ') OR (max_x >= ' + query.min_x + ' AND max_x <= ' + query.max_x + '))';
+            let yQuery = '((min_y >= ' + query.min_y + ' AND min_y <= ' + query.max_y  + ') OR (max_y >= ' + query.min_y + ' AND max_y <= ' + query.max_y + '))';
+            let sqlQuery = 'SELECT tiledname FROM ' + query.layer + ' WHERE ' + xQuery + ' AND ' + yQuery + ';';
+            const pgp = require('pg-promise')(initOptions);
+
+            let db = pgp('postgres://' + database.user + ':' + database.pwd + '@' + database.host + ':' + database.port + '/' + database.name);
+            db.any(sqlQuery) //, [query.layer, query.min_x, query.max_x, query.min_y, query.max_y, query.interval])
+                .then(value => {
+                    console.log('got valid result from postgres');
+                    console.log(typeof value);
+                    res.writeHead(200, {
+                        'Content-Type' : 'application/json',
+                        'Access-Control-Allow-Origin' : '*'
+                    });
+                    res.write(JSON.stringify(value));
+                    res.end();
+                })
+                .catch(err => {
+                    console.log(err);
+                    res.writeHead(400);
+                    res.end();
+                });
+
+        } catch (e) {
+            console.log(e);
+            next();
+        }
+    });
+
     app.get(/\/geoserver\/generate\/contours/, function(req, res, next)  {
         try{
             let queries = req.query;
             console.log('got request');
             layerProcessing.publishContourAfterGenerating('Rasters:'+queries.layers, queries.bands, queries.interval, geoserverConnectionObj)
                 .then(value => {
-                    console.log('got here man before writehead');
+                    console.log('got here before writehead');
                     res.writeHead(200, {
                         'Content-Type':'text/plain',
                         'Access-Control-Allow-Origin' : '*'
@@ -114,18 +152,3 @@
     });
 
 })();
-
-
-// fs.readFile(value.outpath, (err, data) => {
-                    //     if(err) {
-                    //         console.log(err);
-                    //         next();
-                    //     }
-                    //     else {
-                    //         console.log('in final');
-                    //         // res.writeHead(200, {'Content-Type':'application/json'});
-                    //         res.send(data);
-                    //         res.end();
-                    //         next();
-                    //     }
-                    // })

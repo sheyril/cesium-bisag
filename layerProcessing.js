@@ -29,8 +29,7 @@ function prepareTiledContours(jsonLayerFile, geoObject, db) {
             .then(jsonLayerObject => {
                 jsonLayerObject.layer.layerName = convention.layerNameConvention(jsonLayerObject.layer.layerName);
                 myJsonLayerObject = jsonLayerObject;
-
-
+                
                 console.log(myJsonLayerObject);
                 console.log('creating all meta tables', new Date());
                 // console.log(new Date());
@@ -118,11 +117,9 @@ function PrepareInsertionsForMetaTable(jsonLayerObject)    {
 
 function publishTiledContours(jsonLayerObject, tableInfoJsonObject, geoserverConnectionObj)  {
     return new Promise((resolve, reject) => {
-        // console.log(jsonLayerObject, tableInfoJsonObject);
         let layers = tableInfoJsonObject.layers;
         console.log(jsonLayerObject, layers);
         for(let i=0; i<layers.length; i++)  {
-            // console.log(layers[i].filepath, layers[i].layerName, jsonLayerObject.layer.srid, 'Contours', 'CesiumBisag');
             geoserverConnectionObj.publishFeature(layers[i].filepath, layers[i].layerName, jsonLayerObject.layer.srid, jsonLayerObject.layer.layerName, jsonLayerObject.layer.layerName)
                 .then(value => {
                     if(i === layers.length-1)   {

@@ -334,8 +334,10 @@ geoserverConnection.prototype.addPostgisDatastore = function(storeWorkspace, sto
             	body: data
             };
             request(options, (err, resp, body) => 	{
-            	if(!err)
-            		resolve({resp: resp, body: body});
+            	if(!err)	{
+					resolve({resp: resp, body: body});
+					console.log(body);
+				}
             	else {
             		reject(err);
 					return;
