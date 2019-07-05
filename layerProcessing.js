@@ -17,12 +17,41 @@ class sqlError extends Error {}
 //Has Problems inserting 1000 interval contours
 //Publishing done
 //Returns a promise when all layers are made and published
-async function prepareTiledContours(jsonLayerFile, geoObject, db)   {
+
+async function addTiledContoursToExistingTable(jsonLayerFile)    {
     let jsonLayerObject;
     let data = fs.readFileSync(jsonLayerFile, 'utf-8');
     jsonLayerObject = JSON.parse(data);
     jsonLayerObject.layer.layerName = convention.layerNameConvention(jsonLayerObject.layer.layerName);
 
+    try {
+        await QGIS.generateTiledContours(jsonLayerFile);
+        console.log('generated Tiled Contours for : ', jsonLayerObject.layer.layerName);
+        console.log('preparing insertions file');
+        value = await PrepareInsertionsForMetaTable(jsonLayerObject);
+        tableInfoJsonObject = value.tableInfoJsonObject;
+        console.log('insertion file created');
+        console.log('inserting into table');
+        sqlOutput = await geoserverConnectionObj.schema.runSqlFile(value.filepath);
+        console.log('All insertions in meta table done, OK');
+
+        let publishedResp = await publishTiledContours(jsonLayerObject, tableInfoJsonObject, geoserverConnectionObj);
+        if(publishedResp.statusCode >= 300 || publishedResp.statusCode < 200)
+            throw new Error('could not publish features to workspace : ' + jsonLayerObject.layer.layerName);
+
+    }
+    catch(e) {
+        console.log('could not generate tiled contours');
+        throw e;
+    }
+}
+
+async function prepareTiledContours(jsonLayerFile, geoObject, db)   {
+    let jsonLayerObject;
+    let data = fs.readFileSync(jsonLayerFile, 'utf-8');
+    jsonLayerObject = JSON.parse(data);
+    jsonLayerObject.layer.layerName = convention.layerNameConvention(jsonLayerObject.layer.layerName);
+    fs.writeFileSync(jsonLayerFile, JSON.stringify(jsonLayerObject));
     let schema = new postGisOperations.schema(db, jsonLayerObject.layer.layerName);
     let geoserverConnectionObj = new geoserverRequests.geoserverConnection(geoObject.baseHostName, geoObject.user, geoObject.pwd, schema);
 
@@ -43,17 +72,12 @@ async function prepareTiledContours(jsonLayerFile, geoObject, db)   {
         let namespaceResp =  await geoserverConnectionObj.addNamespace(jsonLayerObject.layer.layerName);
         if(namespaceResp.statusCode >= 300 || namespaceResp.statusCode < 200)
             throw new Error('could not create namespace ' + jsonLayerObject.layer.layerName);
-    } catch (e) {
+    }
+    catch (e) {
         console.log('error: could not add namespace, rolling back');
         let str = "DROP SCHEMA IF EXISTS " + jsonLayerObject.layer.layerName + ' CASCADE';
-        sh("echo \"" + str + "\" > " + path.join(convention.sqlPrepared ,"temp.sql"))
-            .then(value => {
-                sh(this.psqlCommand + ' -f ' + path.join(convention.sqlPrepared ,"temp.sql"));
-            })
-            .catch(err => {
-                console.log('could not drop schema');
-                throw new Error('could not drop schema ' + jsonLayerObject.layer.layerName);
-            });
+        await sh("echo \"" + str + "\" > " + path.join(convention.sqlPrepared ,"temp.sql"))
+        await geoObject.schema.runSqlFile(path.join(convention.sqlPrepared ,"temp.sql"));
         throw e;
     }
 
@@ -65,34 +89,22 @@ async function prepareTiledContours(jsonLayerFile, geoObject, db)   {
         console.log('error: could create postgis datastore, rolling back');
         await geoserverConnectionObj.deleteNamespace(jsonLayerObject.layer.layerName);
         let str = "DROP SCHEMA IF EXISTS " + jsonLayerObject.layer.layerName + ' CASCADE';
-        sh("echo \"" + str + "\" > " + path.join(convention.sqlPrepared ,"temp.sql"))
-            .then(value => {
-                sh(this.psqlCommand + ' -f ' + path.join(convention.sqlPrepared ,"temp.sql"));
-            })
-            .catch(err => {
-                console.log('could not drop schema');
-                throw new Error('could not drop schema ' + jsonLayerObject.layer.layerName);
-            });
+        await sh("echo \"" + str + "\" > " + path.join(convention.sqlPrepared ,"temp.sql"))
+        await geoObject.schema.runSqlFile(path.join(convention.sqlPrepared ,"temp.sql"));
         throw e;
     }
 
     try {
-        await QGIS.generateTiledContours(jsonLayerObject);
+        await QGIS.generateTiledContours(jsonLayerFile);
         console.log('generated Tiled Contours for : ', jsonLayerObject.layer.layerName);
     }
     catch (e) {
         console.log('could not generate tiled contours, rolling back');
-        await geoserverConnectionObj.deleteDataStoreRecursively(jsonLayerObject.laer.layerName, jsonLayerObject.layer.layerName);
+        await geoserverConnectionObj.deleteDataStoreRecursively(jsonLayerObject.layer.layerName, jsonLayerObject.layer.layerName);
         await geoserverConnectionObj.deleteNamespace(jsonLayerObject.layer.layerName);
         let str = "DROP SCHEMA IF EXISTS " + jsonLayerObject.layer.layerName + ' CASCADE';
-        sh("echo \"" + str + "\" > " + path.join(convention.sqlPrepared ,"temp.sql"))
-            .then(value => {
-                sh(this.psqlCommand + ' -f ' + path.join(convention.sqlPrepared ,"temp.sql"));
-            })
-            .catch(err => {
-                console.log('could not drop schema');
-                throw new Error('could not drop schema ' + jsonLayerObject.layer.layerName);
-            });
+        await sh("echo \"" + str + "\" > " + path.join(convention.sqlPrepared ,"temp.sql"))
+        await geoObject.schema.runSqlFile(path.join(convention.sqlPrepared ,"temp.sql"));
         rimraf(path.join(jsonLayerObject.layer.outLayerDirectoryPath, '*'), (err ,data) => {
             if(err) {
                 throw new Error('error: could not clean tiles folder, check ' + jsonLayerObject.layer.outLayerDirectoryPath + ' folder and remove the unnnecessary files to avoid clogging the system');
@@ -109,14 +121,8 @@ async function prepareTiledContours(jsonLayerFile, geoObject, db)   {
         await geoserverConnectionObj.deleteDataStoreRecursively(jsonLayerObject.laer.layerName, jsonLayerObject.layer.layerName);
         await geoserverConnectionObj.deleteNamespace(jsonLayerObject.layer.layerName);
         let str = "DROP SCHEMA IF EXISTS " + jsonLayerObject.layer.layerName + ' CASCADE';
-        sh("echo \"" + str + "\" > " + path.join(convention.sqlPrepared ,"temp.sql"))
-            .then(value => {
-                sh(this.psqlCommand + ' -f ' + path.join(convention.sqlPrepared ,"temp.sql"));
-            })
-            .catch(err => {
-                console.log('could not drop schema');
-                throw new Error('could not drop schema ' + jsonLayerObject.layer.layerName);
-            });
+        await sh("echo \"" + str + "\" > " + path.join(convention.sqlPrepared ,"temp.sql"))
+        await geoObject.schema.runSqlFile(path.join(convention.sqlPrepared ,"temp.sql"));
         rimraf(path.join(jsonLayerObject.layer.outLayerDirectoryPath, '*'), (err ,data) => {
             if(err) {
                 throw new Error('error: could not clean tiles folder, check ' + jsonLayerObject.layer.outLayerDirectoryPath + ' folder and remove the unnnecessary files to avoid clogging the system');
@@ -131,14 +137,8 @@ async function prepareTiledContours(jsonLayerFile, geoObject, db)   {
     } catch (e) {
         console.log('error: could not complete insertions, dropping schema');
         let str = "DROP SCHEMA IF EXISTS " + jsonLayerObject.layer.layerName + ' CASCADE';
-        sh("echo \"" + str + "\" > " + path.join(convention.sqlPrepared ,"temp.sql"))
-            .then(value => {
-                sh(this.psqlCommand + ' -f ' + path.join(convention.sqlPrepared ,"temp.sql"));
-            })
-            .catch(err => {
-                console.log('could not drop schema');
-                throw new Error('could not drop schema ' + jsonLayerObject.layer.layerName);
-            });
+        await sh("echo \"" + str + "\" > " + path.join(convention.sqlPrepared ,"temp.sql"))
+        await geoObject.schema.runSqlFile(path.join(convention.sqlPrepared ,"temp.sql"));
         rimraf(path.join(jsonLayerObject.layer.outLayerDirectoryPath, '*'), (err ,data) => {
             if(err) {
                 throw new Error('error: could not clean tiles folder, check ' + jsonLayerObject.layer.outLayerDirectoryPath + ' folder and remove the unnnecessary files to avoid clogging the system');
@@ -147,26 +147,29 @@ async function prepareTiledContours(jsonLayerFile, geoObject, db)   {
         throw e;
     }
 
+    //Cut the tables with 0 rows from the meta table and the schema
+
     try {
         let publishedResp = await publishTiledContours(jsonLayerObject, tableInfoJsonObject, geoserverConnectionObj);
         if(publishedResp.statusCode >= 300 || publishedResp.statusCode < 200)
             throw new Error('could not publish features to workspace : ' + jsonLayerObject.layer.layerName);
-        return jsonLayerObject;
     } catch (e) {
         await geoserverConnectionObj.deleteDataStoreRecursively(jsonLayerObject.layer.layerName, jsonLayerObject.layer.layerName);
         await geoserverConnectionObj.deleteNamespace(jsonLayerObject.layer.layerName);
         console.log('error: could create postgis datastore, rolling back');
         let str = "DROP SCHEMA IF EXISTS " + jsonLayerObject.layer.layerName + ' CASCADE';
-        sh("echo \"" + str + "\" > " + path.join(convention.sqlPrepared ,"temp.sql"))
-            .then(value => {
-                sh(this.psqlCommand + ' -f ' + path.join(convention.sqlPrepared ,"temp.sql"));
-            })
-            .catch(err => {
-                console.log('could not drop schema');
-                throw new Error('could not drop schema ' + jsonLayerObject.layer.layerName);
-            });
+        await sh("echo \"" + str + "\" > " + path.join(convention.sqlPrepared ,"temp.sql"))
+        await geoObject.schema.runSqlFile(path.join(convention.sqlPrepared ,"temp.sql"));
         throw e;
     }
+
+    try {
+        await checkRowsOfEachTileAndTrim(jsonLayerObject, tableInfoJsonObject, geoserverConnectionObj);
+    } catch (e) {
+        console.log(e);
+        console.log('could not eliminate redundant rows, continuing. It is recommended to redo the elimination using checkRowsOfEachTileAndTrim function (do delete the workspace from geoserver and republish the tables)');
+    }
+
     finally {
         //clean the tiles folder
         rimraf(path.join(jsonLayerObject.layer.outLayerDirectoryPath, '*'), (err ,data) => {
@@ -174,6 +177,22 @@ async function prepareTiledContours(jsonLayerFile, geoObject, db)   {
                 throw new Error('error: could not clean tiles folder, check ' + jsonLayerObject.layer.outLayerDirectoryPath + ' folder and remove the unnnecessary files to avoid clogging the system');
             }
         })
+    }
+}
+
+async function deleteTiledContours(jsonLayerFile, geoObject)    {
+    let jsonLayerObject;
+    let data = fs.readFileSync(jsonLayerFile, 'utf-8');
+    jsonLayerObject = JSON.parse(data);
+    jsonLayerObject.layer.layerName = convention.layerNameConvention(jsonLayerObject.layer.layerName);
+    try {
+        await geoObject.deleteDataStoreRecursively(jsonLayerObject.layer.layerName, jsonLayerObject.layer.layerName);
+        await geoObject.deleteNamespace(jsonLayerObject.layer.layerName);
+        let str = "DROP SCHEMA IF EXISTS " + jsonLayerObject.layer.layerName + ' CASCADE';
+        await sh("echo \"" + str + "\" > " + path.join(convention.sqlPrepared ,"temp.sql"))
+        await geoObject.schema.runSqlFile(path.join(convention.sqlPrepared ,"temp.sql"));
+    } catch (e) {
+        throw e;
     }
 }
 
@@ -211,12 +230,46 @@ function PrepareInsertionsForMetaTable(jsonLayerObject)    {
                 }
             }
             tableInfoJsonObject.layers = layers;
-            console.log(data);
             fs.writeFileSync(path.join(convention.sqlPrepared, 'addToMeta.sql'), data);
             console.log('Created Insertion into meta table files');
             resolve({jsonLayerObject : jsonLayerObject, filepath: path.join(convention.sqlPrepared, 'addToMeta.sql'), tableInfoJsonObject: tableInfoJsonObject});
         });
     });
+}
+
+async function checkRowsOfEachTileAndTrim(jsonLayerObject, tableInfoJsonObject, geoObject)   {
+    let layers = tableInfoJsonObject.layers;
+    console.log(layers.length);
+    console.log('inside trimming');
+    for(let i=0; i<layers.length; i++) {
+        let script = '';
+        script = fs.readFileSync(path.join(convention.sqlTemplates, 'getCountOfTable.sql'), 'utf-8');
+        script = script.replace('schema__name', jsonLayerObject.layer.layerName);
+        script = script.replace('table__name', layers[i].layerName);
+        fs.writeFileSync(path.join(convention.sqlPrepared, 'getCountOfTable.sql'), script);
+        let value = await geoObject.schema.runSqlFile(path.join(convention.sqlPrepared, 'getCountOfTable.sql'));
+        if(value.stdout !== null)   {
+            let sqlOutput = value.stdout.split('\n')[2].split(' ');
+            if('0123456789'.indexOf(sqlOutput[sqlOutput.length-1]) !== -1)  {
+                //if the last value is a number, ie valid count
+                if(parseInt(sqlOutput[sqlOutput.length-1]) === 0)   {
+                    //now trim this row
+                    script = fs.readFileSync(path.join(convention.sqlTemplates, 'cutTablesInMeta.sql'), 'utf-8');
+                    // console.log(script);
+                    script = script.replace('schema__name', jsonLayerObject.layer.layerName);
+                    script = script.replace('schema__name', jsonLayerObject.layer.layerName);
+                    script = script.replace('table__name', jsonLayerObject.layer.layerName);
+                    script = script.replace('layer__name', layers[i].layerName);
+                    script = script.replace('layer__name', layers[i].layerName);
+                    fs.writeFileSync(path.join(convention.sqlPrepared, 'cutTablesInMeta.sql'), script);
+                    console.log('deleting: ', layers[i].layerName);
+                    await geoObject.deleteFeature(jsonLayerObject.layerName + ':' + layers[i].layerName);
+                    let opt = await geoObject.schema.runSqlFile(path.join(convention.sqlPrepared, 'cutTablesInMeta.sql'));
+                    console.log(opt);
+                }
+            }
+        }
+    }
 }
 
 function publishTiledContours(jsonLayerObject, tableInfoJsonObject, geoserverConnectionObj)  {
@@ -348,5 +401,6 @@ function deleteVectorFromSystem(filepath)   {
 module.exports = {
     deleteVectorFromSystem : deleteVectorFromSystem,
     publishContourAfterGenerating : publishContourAfterGenerating,
-    prepareTiledContours : prepareTiledContours
+    prepareTiledContours : prepareTiledContours,
+    deleteTiledContours : deleteTiledContours
 };

@@ -1,10 +1,3 @@
-/*
-    File structure for geoserver:
-    workspace baseRasters: includes all baseImagery GeoTiff Files
-    workspace contours: includes contours for respective bacImagery
-    and so on for other types of reliefs
-*/
-
 'use strict';
 class Node
 {
@@ -221,14 +214,15 @@ function shuffle(array) {
 }
 
 //Gets JSON objects from the SQL query
-(function() {
-    const Cesium = require('cesium/Cesium');
-    require('cesium/Widgets/widgets.css');
+const Cesium = require('cesium/Cesium');
+require('cesium/Widgets/widgets.css');
 
-    let viewer = new Cesium.Viewer('cesiumContainer', {
-        requestRenderMode : true,
-        maximumRenderTimeChange : Infinity
-    });
+let viewer = new Cesium.Viewer('cesiumContainer', {
+    requestRenderMode : true,
+    maximumRenderTimeChange : Infinity
+});
+
+(function() {
 
     let expressProxyBaseUrl = 'http://localhost:8585/';
     let geoserverBaseUrl = 'http://localhost:8080/';
@@ -273,9 +267,11 @@ function shuffle(array) {
         let distance = Math.sqrt(xsq+ysq)*111;
 
         //Random Value
-        if(distance < 100 && distance > 30)   {
-            bbox.interval = 100;
+        if(distance < 100)   {
+            bbox.interval = 500;
         }
+        // else if(distance < 300)
+        //     bbox.interval = 500;
         // else if(distance <= 30) {
         //     bbox.interval = 10;
         // }
@@ -336,71 +332,15 @@ function shuffle(array) {
                     }
                 }
             })
+            .then(value => {
+                allDatasourcesNames.inorder(allDatasourcesNames.getRootNode());
+            })
             .catch(err => {
                 console.log(err);
             })
         }
     });
-
-    // let tileOptions = {
-    //     layer: '_my_contours',
-    //     min_x: 91,
-    //     max_x: 92,
-    //     min_y: 21,
-    //     max_y: 22,
-    //     interval: 100
-    // };
-    // let vectorUrl = expressProxyBaseUrl + 'geoserver/tiledcontours?layer=' + tileOptions.layer + '&min_x=' + tileOptions.min_x + '&max_x=' + tileOptions.max_x + '&min_y=' + tileOptions.min_y + '&max_y=' + tileOptions.max_y + '&interval=' + tileOptions.interval;
-    // fetch(vectorUrl, {
-    //     method: 'GET',
-    //     mode: 'cors',
-    //     headers: {
-    //         'Accept' : 'application/json'
-    //     }
-    // })
-    // .then(response => {
-    //     if(response.ok)
-    //         // console.log(response);
-    //         return response.json();
-    // })
-    // .then(responseJson => {
-    //     console.log(typeof responseJson);
-    //     console.log(responseJson[0]);
-    //
-    // })
-    // .catch(err => {
-    //     console.log(err);
-    // })
-    // viewer.camera.moveStart.addEventListener(function() {
-    //     var val = viewer.scene.camera.getPixelSize(Cesium.BoundingSphere.fromEllipsoid(viewer.scene.globe.ellipsoid), viewer.scene.drawingBufferWidth, viewer.scene.drawingBufferHeight);
-    //     console.log(val);
-    //     // the camera started to move
-    // });
-
-
-
-    // toolbar.innerHTML = '<pre>' +
-    //     'West: ' + Cesium.Math.toDegrees(rect.west).toFixed(4) + '<br/>' +
-    //     'South: ' + Cesium.Math.toDegrees(rect.south).toFixed(4) + '<br/>' +
-    //     'East: ' + Cesium.Math.toDegrees(rect.east).toFixed(4) + '<br/>' +
-    //     'North: ' + Cesium.Math.toDegrees(rect.north).toFixed(4) + '</pre>';
-
-    //
-    // var extent = Cesium.Rectangle.fromDegrees(46.176235, 6.120418, 47.176235, 7.120418);
-    // Cesium.Camera.DEFAULT_VIEW_RECTANGLE = extent;
-    // Cesium.Camera.DEFAULT_VIEW_FACTOR = 0;
-
-    // Scractch memory allocation, happens only once.
-
-
-
-    // let mouseEvent = new Cesium.CameraEventAggregator(viewer.scene.canvas);
-
-    // if(mouseEvent.anyButtonDown)    {
-    //     var val = viewer.scene.camera.getPixelSize(Cesium.BoundingSphere.fromEllipsoid(viewer.scene.globe.ellipsoid), viewer.scene.drawingBufferWidth, viewer.scene.drawingBufferHeight);
-    //     console.log(val);
-    // }
-    //
+})();
 
     // let geojsonOptions = {
     //     clampToGround : true,
@@ -480,4 +420,3 @@ function shuffle(array) {
     //now ask the proxy server for the geojson files
     //the proxy server in turn would update database to add the contour files
     //If user wants to set parameters, then use this by default
-})();

@@ -138,15 +138,18 @@ elif method == "pseudocolor":
     outp = sys.argv[3];
     myQgs.generatePseudoColor(inp, outp);
 elif method == "prepareTiledContours":
-    inplayer = sys.argv[2];
-    outpfold = sys.argv[3];
-    lName = sys.argv[4];
-    bands = sys.argv[5];
-    interval = sys.argv[6];
-    tileSize = sys.argv[7];
-    interval = int(interval);
-    bands = int(bands);
-    tileSize = int(tileSize);
-    myQgs.ContoursUsingClip(inplayer, outpfold, lName, bands, interval, tileSize);
+    import json;
+    f = open(sys.argv[2], "r");
+    data = f.read();
+    jsonObject = json.loads(data);
+    print(jsonObject);
+    inplayer = str(jsonObject['layer']['inputLayerPath']);
+    outpfold = str(jsonObject['layer']['outLayerDirectoryPath']);
+    lName = str(jsonObject['layer']['layerName']);
+    bands = int(jsonObject['layer']['bands']);
+    intervals = jsonObject['layer']['intervals'];
+    tileSizes = jsonObject['layer']['tileSizes'];
+    for i in range(0, len(intervals)):
+        myQgs.ContoursUsingClip(inplayer, outpfold, lName, bands, int(intervals[i]), int(tileSizes[i]));
 
 myQgs.endApplication();

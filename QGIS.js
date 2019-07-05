@@ -3,18 +3,22 @@ const convention = require('./convention');
 const rimraf = require('rimraf');
 const useCommandLine = require('./useCommandLine');
 const path = require('path');
+const fs = require('fs');
 
-//Cleans the outputdirectory and outputs tiled contours into the directory and complies to nameing convention
-function generateTiledContours(jsonLayerObject)    {
+function generateTiledContours(jsonLayerFile)    {
     return new Promise((resolve, reject) => {
+        let jsonLayerObject;
+        let data = fs.readFileSync(jsonLayerFile, 'utf-8');
+        jsonLayerObject = JSON.parse(data);
         let layer = jsonLayerObject.layer;
+
         rimraf(path.join(layer.outLayerDirectoryPath, '*'), (err, data) => {
             if(err) {
                 reject(err);
                 return;
             }
             else {
-                useCommandLine.sh('python3 ./QGISprocessing.py prepareTiledContours ' + layer.inputLayerPath + ' ' + layer.outLayerDirectoryPath + ' ' + layer.layerName + ' ' + layer.bands + ' ' + layer.intervals + ' ' + layer.tileSize)
+                useCommandLine.sh('python3 ./QGISprocessing.py prepareTiledContours ' + jsonLayerFile)
                     .then(value => {
                         console.log('completed generation: ', new Date());
                         resolve(jsonLayerObject);

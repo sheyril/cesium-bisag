@@ -1,14 +1,1 @@
-{
-    "layer" : {
-        "inputLayerPath" : "/home/orange/Desktop/3D_DEM_DATA/_22_92.tif",
-        "outLayerDirectoryPath" : "/home/orange/Desktop/3D_DEM_DATA/allShp",
-        "bands" : 1,
-        "intervals" : [
-            100
-        ],
-        "levels" : 5,
-        "tileSize" : "512",
-        "srid" : "EPSG:4326",
-        "layerName" : "testing_contours"
-    }
-}
+{"layer":{"inputLayerPath":"/home/orange/Desktop/3D_DEM_DATA/_22_92.tif","outLayerDirectoryPath":"/home/orange/Desktop/3D_DEM_DATA/allShp","bands":1,"intervals":[500],"levels":5,"tileSizes":[1024],"srid":"EPSG:4326","layerName":"_my_contours"}}
