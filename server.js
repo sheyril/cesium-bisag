@@ -55,7 +55,7 @@
             };
             let xQuery = '((min_x >= ' + query.min_x + ' AND min_x <= ' + query.max_x  + ') OR (max_x >= ' + query.min_x + ' AND max_x <= ' + query.max_x + '))';
             let yQuery = '((min_y >= ' + query.min_y + ' AND min_y <= ' + query.max_y  + ') OR (max_y >= ' + query.min_y + ' AND max_y <= ' + query.max_y + '))';
-            let sqlQuery = 'SELECT tiledname FROM ' + query.layer + ' WHERE ' + xQuery + ' AND ' + yQuery + ' AND interval = ' + query.interval + ';';
+            let sqlQuery = 'SELECT tiledname FROM ' + query.layer + ' WHERE ' + xQuery + ' AND ' + yQuery + ' AND interval_length = ' + query.interval + ';';
             const pgp = require('pg-promise')(initOptions);
 
             let db = pgp('postgres://' + database.user + ':' + database.pwd + '@' + database.host + ':' + database.port + '/' + database.name);

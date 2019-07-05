@@ -18,7 +18,7 @@ class sqlError extends Error {}
 //Publishing done
 //Returns a promise when all layers are made and published
 
-async function addTiledContoursToExistingTable(jsonLayerFile)    {
+async function addTiledContoursToExistingTable(jsonLayerFile, geoserverConnectionObj)    {
     let jsonLayerObject;
     let data = fs.readFileSync(jsonLayerFile, 'utf-8');
     jsonLayerObject = JSON.parse(data);
@@ -32,6 +32,7 @@ async function addTiledContoursToExistingTable(jsonLayerFile)    {
         tableInfoJsonObject = value.tableInfoJsonObject;
         console.log('insertion file created');
         console.log('inserting into table');
+        await checkRowsOfEachTileAndTrim(jsonLayerObject, tableInfoJsonObject, geoserverConnectionObj);
         sqlOutput = await geoserverConnectionObj.schema.runSqlFile(value.filepath);
         console.log('All insertions in meta table done, OK');
 
@@ -263,7 +264,7 @@ async function checkRowsOfEachTileAndTrim(jsonLayerObject, tableInfoJsonObject, 
                     script = script.replace('layer__name', layers[i].layerName);
                     fs.writeFileSync(path.join(convention.sqlPrepared, 'cutTablesInMeta.sql'), script);
                     console.log('deleting: ', layers[i].layerName);
-                    await geoObject.deleteFeature(jsonLayerObject.layerName + ':' + layers[i].layerName);
+                    await geoObject.deleteFeature(jsonLayerObject.layer.layerName + ':' + layers[i].layerName);
                     let opt = await geoObject.schema.runSqlFile(path.join(convention.sqlPrepared, 'cutTablesInMeta.sql'));
                     console.log(opt);
                 }
