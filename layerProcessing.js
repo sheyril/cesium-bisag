@@ -8,6 +8,7 @@ const path = require('path');
 const fs = require('fs');
 const rimraf = require('rimraf');
 const sh = require('./useCommandLine').sh;
+
 class sqlError extends Error {}
 
 //Creates a workspace of the name of the layer, creates a schema, creates a meta table in the schema of the same name as schema
@@ -343,18 +344,6 @@ function deleteVectorFromSystem(filepath)   {
     })
 
 }
-
-let db = new postGisOperations.database('localhost', '5432', 'gisdata', 'postgres', 'Firedragon12');
-let schema = new postGisOperations.schema(db, 'public');
-let gs = new geoserverRequests.geoserverConnection('http://localhost:8080/geoserver/', 'admin', 'geoserver', schema);
-
-prepareTiledContours('./contourConfig.json', gs, db)
-    .then(value => {
-        console.log(value);
-    })
-    .catch(err => {
-        console.log('errrrrrrr', err);
-    });
 
 module.exports = {
     deleteVectorFromSystem : deleteVectorFromSystem,
