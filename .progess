@@ -8,25 +8,15 @@ PostGIS connection with Geoserver done
 QGIS processing scripts done
 Connect GWC with postgis done
 Creating deleting tables in postgis
-
-ToDo:
 Integrate python scripts for QGIS with proxy server
 JDBC mosaic tiling for geoserver use of rasters with postgis
-Speeding up vector rendering on cesium (can use ol-cesium vector tiling support for that, mostly decreases power for analysis, can keep two modes rendering and processing depending on zoom level)
+Speeding up vector rendering on cesium
 Automate publishing and deleting to geoserver from postgis
-WebCaching is not sure shot, geoserver does not have write permissions for the folder maybe, ran it through sudo. find solution
-
-Finally:
 Complete all error handling
 
+ToDo:
+Speed Up tiling retrieval and decrease server load
 
-Changes in JDBC configuration:
-Made 5 pyramid levels
-for worldfile: "TFW=YES" to be used for tiff
-
-command used for importing image data:
-    java -Xbootclasspath/a:/usr/share/java/postgresql-jdbc.jar  -jar /home/orange/geoserver/webapps/geoserver/WEB-INF/lib/gt-imagemosaic-jdbc-21.1.jar import -config /home/orange/geoserver/data_dir/coverages/osm.postgis.xml -spatialTNPrefix secondtable -tileTNPrefix secondtable -dir tiles -ext tif
-(changed a bit)
-
-Link for full tutorial:
-http://docs.geotools.org/latest/userguide/library/coverage/jdbc/index.html
+Finally:
+Documentation
+Data preparation interface
