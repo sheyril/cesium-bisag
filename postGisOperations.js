@@ -1,4 +1,7 @@
 const sh = require('./useCommandLine').sh;
+const convention = require('./convention');
+const path = require('path');
+
 class database  {
     constructor( host, port, name, user, pwd)    {
         this.name = name;
@@ -17,9 +20,22 @@ class schema    {
     }
 }
 
-schema.prototype.sendFeatureToDB = function(shapeFilePath, shapeFileName, SRID='EPSG:4326')  {
-    spCom = 'shp2pgsql -I ' + ' -s ' + SRID + ' ' + shapeFilePath + ' ' + this.name + '.' +shapeFileName;
-    return sh(spCom + ' | ' + this.psqlCommand);
+schema.prototype.sendFeatureToDB = async function(shapeFilePath, shapeFileName, SRID='EPSG:4326')  {
+    return new Promise((resolve, reject) => {
+        spCom = 'shp2pgsql -I ' + ' -s ' + SRID + ' ' + shapeFilePath + ' ' + this.name + '.' +shapeFileName;
+        sh(spCom + ' | ' + this.psqlCommand)
+            .then(value => {
+                if(value.stdout === '' && value.stderr !== '')  {
+                    reject(value);
+                }
+                else {
+                    resolve(value);
+                }
+            })
+            .catch(err => {
+                reject(err);
+            })
+    });
 }
 
 schema.prototype.runSqlFile = function(filePath)    {
@@ -27,12 +43,19 @@ schema.prototype.runSqlFile = function(filePath)    {
 }
 
 schema.prototype.deleteFeature = function(fileNameInTable) {
-
     return new Promise((resolve, reject) => {
         str = "DROP TABLE IF EXISTS " + this.name + '.' + fileNameInTable;
-        sh("echo " + str + ">temp.sql")
-            .then((val1, val2) => {
-                resolve(sh(this.psqlCommand + ' -f temp.sql'));
+        sh("echo " + str + "> " + path.join(convention.sqlPrepared ,"temp.sql"))
+            .then(value => {
+                return sh(this.psqlCommand + ' -f temp.sql');
+            })
+            .then(value => {
+                if(value.stdout === '' && value.stderr !== '')  {
+                    reject(value);
+                }
+                else {
+                    resolve(value);
+                }
             })
             .catch(err => {
                 reject(err);

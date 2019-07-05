@@ -1,0 +1,1 @@
+DROP SCHEMA IF EXISTS _testing_contours CASCADE

@@ -7,8 +7,8 @@
             100
         ],
         "levels" : 5,
-        "tileSize" : "248",
+        "tileSize" : "512",
         "srid" : "EPSG:4326",
-        "layerName" : "my_contours"
+        "layerName" : "testing_contours"
     }
 }

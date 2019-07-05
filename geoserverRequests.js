@@ -1,4 +1,5 @@
-//All asynchronous operations work
+//Complete data store deletion of JDBC store, everything else is stable
+
 'use strict';
 
 const request = require('request');
@@ -7,7 +8,6 @@ const convention = require('./convention');
 const xmldom = require('xmldom');
 const WMSCapabilities = require('wms-capabilities');
 const path = require('path');
-const postGisSchema = require('./postGisOperations');
 const sh = require('./useCommandLine').sh;
 const gdalRetile = require('./useCommandLine').gdalRetile;
 const rimraf = require('rimraf');
@@ -15,6 +15,8 @@ const rimraf = require('rimraf');
 class geoserverConnectionError extends Error {}
 class fileConnectionError extends Error {}
 
+class sqlError extends Error {}
+class cleanFolderError extends Error {}
 
 class geoserverConnection	{
 	constructor(baseHostName, user, pwd, sch)	{
@@ -36,11 +38,13 @@ geoserverConnection.prototype.layerNameConvention = function(FullLayerName)	{
 	return FullLayerName;
 };
 
+//error checking done: complete
+// NOTE: Would not let you create a mapping file if it already exists, would help prevent miserable errors
 geoserverConnection.prototype.createJdbcMapping = function(layerName, srid='EPSG:4326', interpolation='1')	{
 	return new Promise((resolve, reject) => {
 		layerName = this.layerNameConvention(layerName);
 		layerName = path.basename(layerName, '.tif');
-		fs.readFile(path.resolve('./XMLfiles/jdbcMap.xml'), 'utf8', (err, data) => {
+		fs.readFile(path.resolve(convention.xmlTemplates, 'jdbcMap.xml'), 'utf8', (err, data) => {
 			if(err)	{
 				reject(err);
 				return;
@@ -51,6 +55,10 @@ geoserverConnection.prototype.createJdbcMapping = function(layerName, srid='EPSG
 				data = data.replace('__interpolation__', interpolation);
 				console.log(data);
 				let mapPath = path.resolve(convention.jdbcMapPath, layerName+'_map.xml');
+				if(fs.existsSync(mapPath))	{
+					console.log('current mapping file already exits, change name');
+					throw new Error('file already exists, permission denied');
+				}
 				fs.writeFile(mapPath, data, (err) => {
 					if(err)	{
 						reject(err);
@@ -66,99 +74,63 @@ geoserverConnection.prototype.createJdbcMapping = function(layerName, srid='EPSG
 	});
 }
 
-// geoserverConnection.prototype.gdalRetile = function(infilepath, layerName, targetDir, levels='2', srid='EPSG:4326', tileDim='1024')	{
-// 	return new Promise((resolve, reject) => {
-// 		// let layerName = path.basename(infilepath, '.tif');
-// 		console.log('gdal_retile.py -r bilinear -co "TFW=YES" -ps ' + tileDim + ' ' + tileDim + ' -s_srs ' + srid + ' -of GTiff -ot Byte -levels ' + levels + ' -targetDir ' + targetDir + ' ' + infilepath);
-// 		sh('gdal_retile.py -r bilinear -co "TFW=YES" -ps ' + tileDim + ' ' + tileDim + ' -s_srs ' + srid + ' -of GTiff -ot Byte -levels ' + levels + ' -targetDir ' + targetDir + ' ' + infilepath)
-// 			.then(value => {
-// 				resolve({layerName: layerName, tilesDirectory : targetDir});
-// 			})
-// 			.catch(err => {
-// 				reject(err);
-// 			});
-// 	});
-// }
+geoserverConnection.prototype.addJdbcTableToPostgis = async function(mappingFilePath, layerName, tileDirectory, levels='2', srid='EPSG:4326')	{
+	try {
+		let message;
+		if(srid.includes(':'))
+			srid = srid.split(':')[1];
+		let shOutput;
 
-// NOTE: have to create meta table first
-geoserverConnection.prototype.addJdbcTableToPostgis = function(mappingFilePath, layerName, tileDirectory, levels='2', srid='EPSG:4326')	{
-	return new Promise((resolve, reject) => {
-		try {
-			let message;
-			if(srid.includes(':'))
-				srid = srid.split(':')[1];
-			console.log(levels);
-			sh('java -jar ' + convention.jdbcPluginPath + ' ddl -config ' + mappingFilePath + ' -spatialTNPrefix ' + layerName + '_tiled -pyramids ' + levels + ' -statementDelim ";" -srs ' + srid + ' -targetDir ' + path.join(__dirname, 'sqlscripts'))
-			.then(err => {
-				console.log('java -jar ' + convention.jdbcPluginPath + ' ddl -config ' + mappingFilePath + ' -spatialTNPrefix ' + layerName + '_tiled -pyramids ' + levels + ' -statementDelim ";" -srs ' + srid + ' -targetDir ' + path.join(__dirname, 'sqlscripts'));
-				sh(this.schema.psqlCommand + ' -f ' + path.join(__dirname, 'sqlscripts/createmeta.sql'));
-			})
-			.catch(err => {
-				// message = err.message;
-				// message += '\nfailed at meta creation';
-				// err.message = message;
-				reject(err);
-			})
-			.then(value => {
-				console.log(this.schema.psqlCommand + ' -f ' + path.join(__dirname, 'sqlscripts/createmeta.sql'));
-				return sh(this.schema.psqlCommand + ' -f ' + path.join(__dirname, '/sqlscripts/add_'+layerName+'.sql'));
-			})
-			.catch(err => {
-				// message = err.message;
-				// message += '\nfailed at creating tile tables and insertion in meta';
-				// err.message = message;
-				reject(err);
-			})
-			.then(value => {
-				console.log(this.schema.psqlCommand + ' -f ' + path.join(__dirname, '/sqlscripts/add_'+layerName+'.sql'));
-				resolve({outpath: mappingFilePath, layerName:layerName});
-				return sh('java -Xbootclasspath/a:/' + convention.jdbcPostgresClassPath + ' -jar ' + convention.jdbcPluginPath + ' import -config ' + mappingFilePath + ' -spatialTNPrefix ' + layerName + '_tiled -tileTNPrefix ' + layerName + '_tiled -dir ' + tileDirectory + ' -ext tif');
+		shOutput = await sh('java -jar ' + convention.jdbcPluginPath + ' ddl -config ' + mappingFilePath + ' -spatialTNPrefix ' + layerName + '_tiled -pyramids ' + levels + ' -statementDelim ";" -srs ' + srid + ' -targetDir ' + path.join(__dirname, convention.sqlPrepared));
 
-			})
-			.catch(err => {
-				// message = err.message;
-				// message += '\nimporting tile raster data using java utility';
-				// err.message = message;
-				reject(err);
-			})
-			.then(value => {
-				console.log('java -Xbootclasspath/a:/' + convention.jdbcPostgresClassPath + ' -jar ' + convention.jdbcPluginPath + ' import -config ' + mappingFilePath + ' -spatialTNPrefix ' + layerName + '_tiled -tileTNPrefix ' + layerName + '_tiled -dir ' + tileDirectory + ' -ext tif');
-				rimraf('./sqlscripts/*', (err, data) => {
-					if(err) {
-						reject(err);
-					}
-				});
-			})
-			.then(value => {
-				console.log(path.join(tileDirectory, '*'));
-				rimraf(path.resolve(tileDirectory, '*'), (err, data) => {
-					if(err)	{
-						reject(err);
-					}
-				});
-			})
-			.catch(err => {
-				console.log(err);
-				reject(err);
-			});
+		shOutput = await sh(this.schema.psqlCommand + ' -f ' + path.join(__dirname, convention.sqlPrepared,'createmeta.sql'));
+		if(shOutput.stdout === '' && shOutput.stderr !== '')
+		{
+			console.log('failed at making new meta table, continuing');
 		}
 
-		catch (e) {
-			rimraf(path.resolve(tileDirectory, '*'), (err, data) => {
-				if(err)	{
-					reject(err);
-				}
-			});
-			reject(e);
+		shOutput = await sh(this.schema.psqlCommand + ' -f ' + path.join(__dirname, convention.sqlPrepared,'add_'+layerName+'.sql'));
+		if(shOutput.stdout === '' && shOutput.stderr !== '')
+		{
+			//rollback
+			if(fs.existsSync(mappingFilePath))
+				fs.unlinkSync(mappingFilePath);
+			throw new sqlError('failed at inserting entries into metatable, rolling back');
 		}
-	});
+
+		shOutput = await sh('java -Xbootclasspath/a:/' + convention.jdbcPostgresClassPath + ' -jar ' + convention.jdbcPluginPath + ' import -config ' + mappingFilePath + ' -spatialTNPrefix ' + layerName + '_tiled -tileTNPrefix ' + layerName + '_tiled -dir ' + tileDirectory + ' -ext tif');
+		console.log('cleaning tiles directory which contains Tiled pyramids, ' + tileDirectory);
+
+		rimraf(path.resolve(tileDirectory, '*'), (err, data) => {
+			if(err)	{
+				throw err;
+			}
+		});
+	}
+	catch (e) {
+		//rollback
+		if(fs.existsSync(mappingFilePath))
+			fs.unlinkSync(mappingFilePath);
+
+		let shOutput = await sh(this.schema.psqlCommand + ' -f ' + path.join(__dirname, convention.sqlPrepared,'remove_'+layerName+'.sql'));
+		if(shOutput.stdout === '' && shOutput.stderr !== '')
+			throw new sqlError('could not remove tiledTables');
+		rimraf(path.join(tileDirectory, '*'), (err, data) => {
+			if(err)	{
+				console.log('could not clean tile directory ', tileDirectory);
+				throw new cleanFolderError('could not clean tile Directory ', tileDirectory)
+			}
+		});
+		throw e;
+	}
 }
 
+// NOTE: have to create meta table first
 geoserverConnection.prototype.addJdbcStoreFromPostgisToGeoserver = function(namespace, layerName, mappingFilePath)	{
 	return new Promise((resolve, reject) => {
 		let url = 'file:'+ path.join(convention.jdbcMapPathRel, path.basename(mappingFilePath));
 		console.log(url);
-		fs.readFile(path.resolve('./XMLfiles/addJdbcImageMosaic.xml'), 'utf-8', (err, data) => {
+		fs.readFile(path.join(convention.xmlTemplates, 'addJdbcImageMosaic.xml'), 'utf-8', (err, data) => {
 			if(err)	{
 				reject(err);
 				return;
@@ -183,8 +155,13 @@ geoserverConnection.prototype.addJdbcStoreFromPostgisToGeoserver = function(name
 	    		};
 				console.log(options.url);
 				request(options, (err, resp, body) => {
-	    			if(!err)	{
-	    				resolve({resp: resp, body: body, storeName: layerName});
+					if(!err)	{
+						if(resp.statusCode >= 200 && resp.statusCode < 300)
+							resolve({resp: resp, body: body, storeName: layerName, outpath:mappingFilePath});
+						else 	{
+							console.log(resp.statusCode);
+							reject(resp);
+						}
 
 					}
 	    			else {
@@ -212,48 +189,83 @@ geoserverConnection.prototype.publishCoverageFromDataStore = function(featureNam
 			if(err)
 				reject(err);
 			else {
-				if(resp.statusCode !== 500)
+				if(resp.statusCode >= 200 && resp.statusCode < 300)
 					resolve({resp: resp, body: body, storeName: datastoreName, layerName:featureName});
-				else
+				else 	{
+					console.log(resp.statusCode);
 					reject(resp);
+				}
 			}
 		});
     });
 };
 
-// NOTE: Interpolation is always kept 1, can change third parameter if createJdbcMapping for other types
-geoserverConnection.prototype.createJdbcCoverageFromRaster = function(layerPath, layerName, workspace, tileDir, levels='3', srid='EPSG:4326', tileSize='1024') {
-	return new Promise((resolve, reject) => {
-		layerName = this.layerNameConvention(layerName);
-		console.log(layerPath, layerName, workspace, tileDir, levels, srid, tileSize);
-		gdalRetile(layerPath, layerName, tileDir, levels, srid, tileSize)
-			.then(value => {
-				return this.createJdbcMapping(value.layerName, srid, '1');
-			})
-			.then(value => {
-				// console.log(tileDir);
-				return this.addJdbcTableToPostgis(value.outpath, value.layerName, tileDir, levels, srid);
-			})
-			.then(value => {
-				console.log(value);
-				return this.addJdbcStoreFromPostgisToGeoserver(workspace, value.layerName, value.outpath);
-			})
-			.then(value => {
-				return this.publishCoverageFromDataStore(layerName, workspace, value.storeName);
-			})
-			.then(value => {
-				// resolve({storeName: value.storeName, layerName : value.layerName});
-			})
-			.catch(err =>{
-				reject(err);
-			});
-	});
+//error checking done: complete
+geoserverConnection.prototype.createJdbcCoverageFromRaster = async function(layerPath, layerName, workspace, tileDir, levels='3', srid='EPSG:4326', tileSize='1024', interpolation = '1') {
+	layerName = this.layerNameConvention(layerName);
+	let value;
+	try {
+		value = await gdalRetile(layerPath, layerName, tileDir, levels, srid, tileSize);
+	} catch (e) {
+		throw new Error('could not retile');
+	}
 
+	try {
+		value = await this.createJdbcMapping(layerName, srid, interpolation);
+	} catch (e) {
+		//rollback
+		console.log('cleaning tile directory');
+		rimraf(path.join(tileDir, '*'), (err, data)	=> {
+			if(err)	{
+				throw new cleanFolderError('could not create mapping and could not clean tile Directory: ', tileDir);
+			}
+		});
+		throw new Error('could not create mapping');
+	}
+
+	try {
+		await this.addJdbcTableToPostgis(value.outpath, layerName, tileDir, levels, srid);
+		value = await this.addJdbcStoreFromPostgisToGeoserver(workspace, layerName, value.outpath);
+	} catch (e) {
+		throw e;
+	}
+	try {
+		await this.publishCoverageFromDataStore(layerName, workspace, value.storeName);
+		resolve({layerName: layerName, workspace: workspace, storeName:value.storeName});
+	} catch (e) {
+		//rollback
+		// await this.deleteDataStoreRecursively(workspace, value.storeName);
+		let shOutput = await sh(this.schema.psqlCommand + ' -f ' + path.join(__dirname, convention.sqlPrepared,'remove_'+layerName+'.sql'));
+		if(shOutput.stdout === '' && shOutput.stderr !== '')
+			throw new sqlError('could not remove tiledTables');
+		rimraf(path.join(tileDirectory, '*'), (err, data) => {
+			if(err)	{
+				console.log('could not clean tile directory ', tileDirectory);
+				throw new cleanFolderError('could not clean tile Directory ', tileDirectory)
+			}
+		});
+		throw e;
+	}
 }
 
+// geoserverConnection.prototype.deleteJdbcStore = async function(workspace, storeName)	{
+// 	let mappingFilePath = path.join('file:' + convention.jdbcMapPathRel, storeName+'_map.xml');
+// 	if(!fs.existsSync(mappingFilePath))	{
+// 		throw new Error('store does not exist or its mapping file is lost in which case it is broken and it is recommended to delete the store from admin page');
+// 	}
+// 	try {
+// 		value = await sh(this.schema.psqlCommand + ' -f ' + path.join(__dirname, convention.sqlPrepared,'remove_'+storeName+'.sql'));
+// 		fs.unlinkSync(mappingFilePath);
+// 		this.deleteDataStoreRecursively();
+// 	} catch (e) {
+//
+// 	}
+//
+// }
+//error checking done: complete
 geoserverConnection.prototype.addNamespace = function(namespace)	{
 	return new Promise((resolve, reject) => {
-        fs.readFile(path.resolve('./XMLfiles/addNamespace.xml'), 'utf8', (err,data) => {
+        fs.readFile(path.resolve(convention.xmlTemplates,'addNamespace.xml'), 'utf8', (err,data) => {
     		if(err)	{
     			reject(err);
 				return;
@@ -273,8 +285,14 @@ geoserverConnection.prototype.addNamespace = function(namespace)	{
     			body : data
     		};
             request(options, (err, resp, body) => {
-    			if(!err)
-    				resolve({resp: resp, body: body});
+    			if(!err)	{
+					if(resp.statusCode >= 200 && resp.statusCode < 300)
+						resolve({resp: resp, body: body});
+					else 	{
+						console.log(resp.statusCode);
+						reject(resp);
+					}
+				}
     			else {
     				reject(err);
     			}
@@ -283,6 +301,7 @@ geoserverConnection.prototype.addNamespace = function(namespace)	{
     });
 };
 
+//error checking done: complete
 geoserverConnection.prototype.deleteNamespace = function(namespace)	{
     return new Promise((resolve, reject) => {
         let options = {
@@ -298,19 +317,25 @@ geoserverConnection.prototype.deleteNamespace = function(namespace)	{
     		}
     	};
     	request(options, (err, resp, body) => {
-    		if(!err)
-    			resolve({resp: resp, body: body});
-    		else {
+			if(!err)	{
+				if(resp.statusCode >= 200 && resp.statusCode < 300)
+					resolve({resp: resp, body: body});
+				else 	{
+					console.log(resp.statusCode);
+					reject(resp);
+				}
+			}
+			else {
     			reject(err);
-				return;
     		}
     	});
     });
 };
 
+//error checking done: complete
 geoserverConnection.prototype.addPostgisDatastore = function(storeWorkspace, storeName)  {
     return new Promise((resolve, reject) => {
-        fs.readFile(path.resolve('./XMLfiles/addPostGis.xml'), 'utf8', (err, data) => {
+        fs.readFile(path.join(convention.xmlTemplates ,'addPostGis.xml'), 'utf8', (err, data) => {
     		if(err)
     			reject(err);
 
@@ -334,19 +359,22 @@ geoserverConnection.prototype.addPostgisDatastore = function(storeWorkspace, sto
             	body: data
             };
             request(options, (err, resp, body) => 	{
-            	if(!err)	{
-					resolve({resp: resp, body: body});
-					console.log(body);
+				if(!err)	{
+					if(resp.statusCode >= 200 && resp.statusCode < 300)
+						resolve({resp: resp, body: body});
+					else 	{
+						reject(resp);
+					}
 				}
-            	else {
-            		reject(err);
-					return;
+    			else {
+            		reject(new geoserverConnectionError('network error: could not connect to geoserver'));
     			}
             });
     	});
     });
 };
 
+//error checking done: complete
 geoserverConnection.prototype.deleteDataStoreRecursively = function(storeWorkspace, storeName)	{
     return new Promise((resolve, reject) => {
         let options = {
@@ -365,18 +393,23 @@ geoserverConnection.prototype.deleteDataStoreRecursively = function(storeWorkspa
     	};
     	console.log(this.user, this.pwd);
     	request(options, (err, resp, body) => {
-    		if(!err)	{
-                resolve({resp: resp, body: body});
-    		}
-    		else {
+			if(!err)	{
+				if(resp.statusCode >= 200 && resp.statusCode < 300)	{
+					resolve({resp: resp, body: body});
+				}
+				else 	{
+					reject(resp);
+				}
+			}
+			else {
     			reject(err);
-				return;
     		}
     	});
     });
 
 };
 
+//error checking done: complete
 geoserverConnection.prototype.publishFeatureFromDataStore = function(featureName, workspaceName, datastoreName)	{
     return new Promise((resolve, reject) => {
         let options	= {
@@ -390,22 +423,30 @@ geoserverConnection.prototype.publishFeatureFromDataStore = function(featureName
     		body: '<featureType><name>' + featureName + '</name></featureType>'
     	};
 		request(options, (err, resp, body) => {
-			if(err)
-				reject(err);
-			else {
-				console.log(options);
-				resolve({resp: resp, body: body});
+			if(!err)	{
+				if(resp.statusCode >= 200 && resp.statusCode < 300)
+					resolve({resp: resp, body: body});
+				else 	{
+					reject(resp);
+				}
 			}
-		})
+			else {
+				reject(err);
+			}
+		});
     });
 };
 
+//error checking done: complete
 geoserverConnection.prototype.publishFeature = function(featurePath, featureName, srid='EPSG:4326', workspaceName, datastoreName)	{
     return new Promise((resolve, reject) => {
         featureName = this.layerNameConvention(featureName);
 		this.schema.sendFeatureToDB(featurePath, featureName, srid)
 			.then(value => {
-				resolve(this.publishFeatureFromDataStore(featureName, workspaceName, datastoreName));
+				return this.publishFeatureFromDataStore(featureName, workspaceName, datastoreName);
+			})
+			.then(value => {
+				resolve(value);
 			})
 			.catch(e => {
 				reject(e);
@@ -413,8 +454,8 @@ geoserverConnection.prototype.publishFeature = function(featurePath, featureName
     });
 }
 
+//error checking done: complete
 geoserverConnection.prototype.deleteFeature = function(passedLayer)	{
-
     return new Promise((resolve, reject) => {
         passedLayer = this.layerNameConvention(passedLayer);
     	let namespace = passedLayer.split(':')[0];
@@ -436,7 +477,13 @@ geoserverConnection.prototype.deleteFeature = function(passedLayer)	{
     	};
     	request(options, (err, resp, body) => {
     		if(!err)	{
-				resolve(this.schema.deleteFeature(featureName));
+				this.schema.deleteFeature(featureName)
+					.then(value => {
+						resolve(value)
+					})
+					.catch(err => {
+						reject(err);
+					})
     		}
     		else
     			reject(err);
@@ -451,9 +498,7 @@ geoserverConnection.prototype.getMapWMS = function(passedLayer)	{
 	    let namespace = passedLayer.split(':')[0];
     	let layername = passedLayer.split(':')[1];
 
-		// console.log(passedLayer);
-    	//do getcapabilities first
-    	let options = {
+		let options = {
     		url: this.baseHostName + 'wms?',
     		method: 'GET',
     		headers: {
@@ -473,17 +518,14 @@ geoserverConnection.prototype.getMapWMS = function(passedLayer)	{
     			// NOTE: Searching capabilties doc using for, better to keep the document in postgres sql and then change it whenever a change is encountered, and use postgres sql for retrieving data
     			// NOTE: since all we need is bounding box and srs, the sql store can store only these values
     			// NOTE: primary index would be name of the raster
-                // console.log(jsondoc);
-    			let gotLayer;
+                let gotLayer;
     			for(let layer of jsondoc.Capability.Layer.Layer)	{
     				if(layer.Name === passedLayer)	{
     					gotLayer = layer;
-                        // console.log(layer);
-    					break;
+                		break;
     				}
     			}
-                // console.log(gotLayer);
-    			let mapOptions = {
+                let mapOptions = {
     				method: 'GET',
     				encoding: null,
     				headers: 'accept:image/jpeg',

@@ -1,0 +1,1 @@
+CREATE TABLE cesium_mosaic(name CHARACTER (64)  NOT NULL,spatialtable VARCHAR (128)  NOT NULL,tiletable VARCHAR (128)  NOT NULL,resx FLOAT8,resy FLOAT8,minx FLOAT8,miny FLOAT8,maxx FLOAT8,maxy FLOAT8,CONSTRAINT MASTER_PK PRIMARY KEY (name,spatialtable,tiletable));

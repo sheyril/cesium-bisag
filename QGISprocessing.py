@@ -1,4 +1,4 @@
-## NOTE: Module is always directly called by the express server
+#Everything is stable here
 from qgis.core import *;
 import PyQt5.QtCore;
 import PyQt5.QtGui;
@@ -8,11 +8,6 @@ from qgis.analysis import QgsNativeAlgorithms;
 import sys;
 from pathlib import Path;
 import glob;
-
-#sys.argv store the arguments, first argument is file name that was run
-#convention: argv[1]:processName, then all the parameters in order defined in function
-
-#Wrapper is made as exitQgis() was causing problems with processing functions
 
 class QGISwrapper:
     def __init__(self):
@@ -26,25 +21,20 @@ class QGISwrapper:
         self.qgs.exitQgis();
 
     def generateContour(self, inp, outp, bandNumber, interval):
-        ## NOTE: initQgis, exitQgis can be taken out and the function can be used in sync with startApplication and endApplication
-        # self.qgs.initQgis();
         sys.path.append('/usr/share/qgis/python/plugins/')
         import processing
         from processing.core.Processing import Processing
         Processing.initialize();
         QgsApplication.processingRegistry().addProvider(QgsNativeAlgorithms());
         processing.run("gdal:contour", { 'INPUT':inp,'BAND':bandNumber,'INTERVAL':interval,'FIELD_NAME':'ELEV','CREATE_3D':False,'CREATE_3D':False,'IGNORE_NODATA':False,'NODATA':None,'OFFSET':0,'OPTIONS':'','OUTPUT':outp});
-        # self.qgs.exitQgis();
 
     def convertRasterToPointVector(self, inp, outp, bandNumber):
-        # self.qgs.initQgis();
         sys.path.append('/usr/share/qgis/python/plugins/')
         import processing
         from processing.core.Processing import Processing
         Processing.initialize();
         QgsApplication.processingRegistry().addProvider(QgsNativeAlgorithms());
         processing.run("native:pixelstopoints", {'INPUT_RASTER':inp,'RASTER_BAND':bandNumber,'FIELD_NAME':'VALUE','OUTPUT':outp});
-        # self.qgs.exitQgis();
         print('contour');
 
     ## NOTE: recheck value for pixel size
@@ -53,19 +43,14 @@ class QGISwrapper:
         processing.run("qgis:tininterpolation", {'INTERPOLATION_DATA':inp + '::~::0::~::0::~::0','METHOD':0,'EXTENT': extent,'PIXEL_SIZE':pixelSize,'OUTPUT':outp});
 
     def generateHillShade(self, inp, outp):
-        # self.qgs.initQgis();
         sys.path.append('/usr/share/qgis/python/plugins/')
         import processing
         from processing.core.Processing import Processing
         Processing.initialize();
         QgsApplication.processingRegistry().addProvider(QgsNativeAlgorithms());
         processing.run("gdal:hillshade", {'INPUT':inp,'BAND':1,'Z_FACTOR':1.571e-05,'SCALE':1,'AZIMUTH':315,'ALTITUDE':40,'COMPUTE_EDGES':False,'ZEVENBERGEN':False,'COMBINED':False,'MULTIDIRECTIONAL':False,'OPTIONS':'','OUTPUT':outp})
-        # self.qgs.exitQgis();
-        # print('hillshade')
 
     def generatePseudoColor(self,inp,outp):
-        #applying pseudocolor style
-        # self.qgs.initQgis();
         rlayer = QgsRasterLayer(inp, "pseudocolor_layer")
         provider = rlayer.dataProvider()
         extent = rlayer.extent();
@@ -100,32 +85,13 @@ class QGISwrapper:
         pipe.set(renderer.clone())
         file_writer = QgsRasterFileWriter(outp)
         file_writer.writeRaster(pipe, width, height, extent, rlayer.crs())
-        # self.qgs.exitQgis();
-
-    def prepareContours(self,tilesFolder, outputFolder, layerName, srid, bands, intervals):
-        p = Path(tilesFolder);
-        q = p / '*.tif';
-        allRasters = glob.glob(str(q));
-        for interval in intervals:
-            for rasterPath in range(0, len(allRasters)):
-                layer  = QgsRasterLayer(allRasters[rasterPath], 'abc');
-                extent = layer.extent();
-                xMin = extent.xMinimum();
-                yMin = extent.yMinimum();
-                xMax = extent.xMaximum();
-                yMax = extent.yMaximum();
-                outLayerName = '_' + str(interval) + '_' + str(xMin) + '_' + str(xMax) + '_' + str(yMin) + '_' + str(yMax) + '_' + layerName + '.shp';
-                outLayerPath = Path(outputFolder) / outLayerName;
-                print(str(outLayerPath));
-                self.generateContour(allRasters[rasterPath], str(outLayerPath), bands, interval);
 
     def ContoursUsingClip(self, inpLayer, outputFolder, layerName, bands, interval, tileSize):
         import os;
         layer = QgsRasterLayer(inpLayer);
-        self.generateContour(inpLayer, '/home/orange/Desktop/3D_DEM_DATA/test.shp', bands, interval);
+        self.generateContour(inpLayer, './temporaryFiles/tiles/test.shp', bands, interval);
         pixelSizeX = layer.rasterUnitsPerPixelX();
         pixelSizeY = layer.rasterUnitsPerPixelY();
-        #tileSize * pixelSizeX gives disp in x direc
         extent = layer.extent();
         xMin = extent.xMinimum();
         yMin = extent.yMinimum();
@@ -134,12 +100,10 @@ class QGISwrapper:
         p = Path(outputFolder);
         x = xMin;
         while x < xMax:
-        # for x in range(xMin, xMax, pixelSizeX*tileSize):
             nextX = x + pixelSizeX*tileSize;
             if(nextX > xMax):
                 nextX = xMax;
             y = yMin;
-            # for y in range(yMin, yMax, pixelSizeY*tileSize):
             while y < yMax:
                 nextY = y + pixelSizeY*tileSize;
                 if(nextY > yMax):
@@ -147,17 +111,16 @@ class QGISwrapper:
                 outLayerName = '_' + str(interval) + '_' + str(x) + '_' + str(nextX) + '_' + str(y) + '_' + str(nextY)  + '_' + layerName + '.shp';
                 outLayerPath = p / outLayerName;
                 outLayerPath = str(outLayerPath);
-                os.system('ogr2ogr -f \"ESRI Shapefile\" -clipsrc ' + str(x) + ' ' + str(y) + ' ' + str(nextX) + ' ' + str(nextY) + ' ' + outLayerPath + ' /home/orange/Desktop/3D_DEM_DATA/test.shp');
+                os.system('ogr2ogr -f \"ESRI Shapefile\" -clipsrc ' + str(x) + ' ' + str(y) + ' ' + str(nextX) + ' ' + str(nextY) + ' ' + outLayerPath + ' ./temporaryFiles/tiles/test.shp');
                 y = nextY;
             x = nextX;
-                # os.system('ogr2ogr -f \"ESRI Shapefile\" -clipsrc ' + x + ' ' + y + ' ' + nextX + ' ' + nextY + ' ' + outLayerName + ' home/orange/Desktop/3D_DEM_DATA/test.shp');
-    # def prepareMultipleLayersContours(self, )
+    # if(os.path.exists('./temporaryFiles/tiles/test.shp'))
+
 
 method = sys.argv[1];
 myQgs = QGISwrapper();
 myQgs.startApplication();
-# myQgs.prepareContour("/home/orange/Desktop/3D_DEM_DATA/tiles", "/home/orange/Desktop/3D_DEM_DATA/allShp", "myContours", 'EPSG:4326', 1, 100);
-# myQgs.ContoursUsingClip('/home/orange/Desktop/3D_DEM_DATA/_22_92.tif', '/home/orange/Desktop/3D_DEM_DATA/allShp', '_my_contours', 1, 100, 1024);
+
 if method == "contour":
     inp = sys.argv[2];
     outp = sys.argv[3];
@@ -174,19 +137,7 @@ elif method == "pseudocolor":
     inp = sys.argv[2];
     outp = sys.argv[3];
     myQgs.generatePseudoColor(inp, outp);
-elif method == "prepareContour":
-    print('hey');
-    inpfold = sys.argv[2];
-    outpfold = sys.argv[3];
-    lName = sys.argv[4];
-    srid = sys.argv[5];
-    bands = sys.argv[6];
-    length = len(sys.argv);
-    intervals = [];
-    for i in range(7, length):
-        intervals.append(int(sys.argv[i]));
-    myQgs.prepareContours(inpfold, outpfold, lName, srid, bands, intervals);
-elif method == "tileThemHere":
+elif method == "prepareTiledContours":
     inplayer = sys.argv[2];
     outpfold = sys.argv[3];
     lName = sys.argv[4];
@@ -197,4 +148,5 @@ elif method == "tileThemHere":
     bands = int(bands);
     tileSize = int(tileSize);
     myQgs.ContoursUsingClip(inplayer, outpfold, lName, bands, interval, tileSize);
+
 myQgs.endApplication();

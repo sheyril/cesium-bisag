@@ -38,3 +38,8 @@ exports.defaultGeoserverConnection = ['http://localhost:8080/geoserver/', 'admin
 exports.defaultSchema = ['public'];
 
 exports.retilingTemporaryFolder = '/home/orange/Desktop/3D_DEM_DATA/tiles/';
+
+exports.xmlTemplates = './templateFiles/XML/';
+exports.sqlTemplates = './templateFiles/SQL/';
+exports.xmlPrepared = './preparedScripts/XML/';
+exports.sqlPrepared = './preparedScripts/SQL/';

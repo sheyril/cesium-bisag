@@ -1,5 +1,5 @@
-CREATE SCHEMA _my_contours;
-CREATE TABLE _my_contours._my_contours (
+CREATE SCHEMA _testing_contours;
+CREATE TABLE _testing_contours._testing_contours (
     interval_length SMALLINT NOT NULL,
     min_x DOUBLE PRECISION NOT NULL,
     max_x DOUBLE PRECISION NOT NULL,
@@ -8,7 +8,7 @@ CREATE TABLE _my_contours._my_contours (
     tiledname VARCHAR(50) PRIMARY KEY
 );
 
-CREATE INDEX ix__my_contours ON _my_contours._my_contours (
+CREATE INDEX ix__testing_contours ON _testing_contours._testing_contours (
     interval_length,
     min_x,
     min_y
