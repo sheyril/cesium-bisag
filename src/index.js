@@ -1,4 +1,5 @@
 // TODO: Change EventListener to ending motion of camera, NOT just moving
+//Increase frame distance of camera proportionally to the rect box vertices distance from cameras position
 'use strict';
 class Node
 {
@@ -225,20 +226,12 @@ let viewer = new Cesium.Viewer('cesiumContainer', {
     maximumRenderTimeChange : Infinity
 });
 
-//Arguments to constructor, full layer name <string>, zoomLevels <object: array of level:distance pairs>
-//zoomLevels format:
-// zoomLevels {
-//     pairs: [{
-//         upperBound : distance, :distance is the upper limit to show the tiles
-//         framelengthX: x, :the frame to be retreived to decrease load on server, implement later
-//         framelengthY: y
-//      }, ...]
-// }
-class TiledVectors  {
-    constructor(layer, levels)    {
-        this.layer = layer;
-        this.levels = levels;
-        this.allDatasourcesNames = new BST();
+class RectangleExtentFrame {
+    constructor(min_x, min_y, max_x, max_y) {
+        this.min_x = min_x;
+        this.min_y = min_y;
+        this.max_x = max_x;
+        this.max_y = max_y;
     }
 }
 
@@ -246,15 +239,33 @@ class TiledVectors  {
 class ZoomLevels    {
     constructor(d0=0, d1=0, d2=0, d3=0, d4=0)
     {
-        this.pairs = [{upperBound:d0}, {upperBound:d1}, {upperBound:d2}, {upperBound:d3}, {upperBound:d4}];
-        // this.pairs = [d0, d1, d2, d3, d4];
+        this.pairs = [
+            { upperBound:d0 },
+            { upperBound:d1 },
+            { upperBound:d2 },
+            { upperBound:d3 },
+            { upperBound:d4 }
+        ];
+    }
+}
+
+ZoomLevels.prototype.pushFrame()  {
+
+}
+
+class TiledVectors  {
+    constructor(layer, levels)    {
+        this.layer = layer;             //argument type: String
+        this.levels = levels;           //argument type: ZoomLevels object
+        this.addedDataSources = new BST();
+        this.requestedDataSources = new BST();
     }
 }
 
 TiledVectors.prototype.addTiledVectorDataSource = function()   {
     //Arrow function used to use current context, without arrow function, this doesnt bind inside event listener
-    viewer.camera.changed.addEventListener(() => {
-
+    viewer.camera.moveEnd.addEventListener(() => {
+        console.log('event fired');
         let scratchRectangle = new Cesium.Rectangle();
         var val = viewer.scene.camera.getPixelSize(Cesium.BoundingSphere.fromEllipsoid(viewer.scene.globe.ellipsoid), viewer.scene.drawingBufferWidth, viewer.scene.drawingBufferHeight);
         let rect = viewer.camera.computeViewRectangle(viewer.scene.globe.ellipsoid, scratchRectangle);
@@ -317,8 +328,8 @@ TiledVectors.prototype.addTiledVectorDataSource = function()   {
             };
             shuffle(responseJson);
             for(let layerJson of responseJson)  {
-                if(this.allDatasourcesNames.search(layerJson.tiledname) === null)    {
-                    this.allDatasourcesNames.insert(layerJson.tiledname);
+                if(this.addedDataSources.search(layerJson.tiledname) === null)    {
+                    this.addedDataSources.insert(layerJson.tiledname);
                     let jsonUrlOptions = {
                         workspace: bbox.layer,
                         service: 'WFS',
@@ -348,8 +359,6 @@ TiledVectors.prototype.addTiledVectorDataSource = function()   {
 
 (function() {
 
-
-    // let allDatasourcesNames = new BST();
     viewer.imageryLayers.remove(viewer.imageryLayers.get(0));
     let prov = new Cesium.WebMapServiceImageryProvider({
             url : geoserverBaseUrl+'geoserver/Rasters/wms',
@@ -375,102 +384,12 @@ TiledVectors.prototype.addTiledVectorDataSource = function()   {
     // console.log(zl);
     // console.log(a);
     let contours = new TiledVectors('_my_contours', new ZoomLevels(30, 300));
-    // console.log(contours.levels.pairs[0]);
     contours.addTiledVectorDataSource();
 
     // viewer.camera.flyTo({
     //     destination : Cesium.Cartesian3.fromDegrees(92, 22),
     //     height: 30000,
     //     duration : 10
-    // });
-
-    // viewer.camera.changed.addEventListener(function() {
-    //     let scratchRectangle = new Cesium.Rectangle();
-    //     var val = viewer.scene.camera.getPixelSize(Cesium.BoundingSphere.fromEllipsoid(viewer.scene.globe.ellipsoid), viewer.scene.drawingBufferWidth, viewer.scene.drawingBufferHeight);
-    //     let rect = viewer.camera.computeViewRectangle(viewer.scene.globe.ellipsoid, scratchRectangle);
-    //     let bbox = {
-    //         layer : '_my_contours',
-    //         min_x : Cesium.Math.toDegrees(rect.west),
-    //         min_y : Cesium.Math.toDegrees(rect.south),
-    //         max_x : Cesium.Math.toDegrees(rect.east),
-    //         max_y : Cesium.Math.toDegrees(rect.north)
-    //     };
-    //
-    //
-    //     //Note 1 degree: 111 km. use 0.5 degrees for problems
-    //     let xsq = (bbox.max_x - bbox.min_x)*(bbox.max_x - bbox.min_x);
-    //     let ysq = (bbox.max_y - bbox.min_y)*(bbox.max_y - bbox.min_y);
-    //     let distance = Math.sqrt(xsq+ysq)*111;
-    //     console.log('distance: ', distance, 'pixelSize: ', val);
-    //     //height below 8000 is fine to start showing contours;
-    //
-    //     // let height = ellipsoid.cartesianToCartographic(camera.position).height;
-    //     // var height = viewer.scene.globe.ellipsoid;
-    //     // console.log(height);
-    //
-    //     // console.log(distance);
-    //     //Random Value
-    //     if(distance < 300 && distance > 30)   {
-    //         bbox.interval = 500;
-    //     }
-    //     else if(distance < 30)
-    //         bbox.interval = 100;
-    //     // else if(distance <= 30) {
-    //     //     bbox.interval = 10;
-    //     // }
-    //     else{
-    //         bbox.interval = 1000;
-    //     }
-    //     //Sets intervals depending on the values
-    //     if(bbox.interval < 1000)    {
-    //
-    //         let vectorUrl = expressProxyBaseUrl + 'geoserver/tiledcontours?layer=' + bbox.layer + '&min_x=' + bbox.min_x + '&max_x=' + bbox.max_x + '&min_y=' + bbox.min_y + '&max_y=' + bbox.max_y + '&interval=' + bbox.interval;
-    //         fetch(vectorUrl, {
-    //             method: 'GET',
-    //             mode: 'cors',
-    //             headers: {
-    //                 'Accept' : 'application/json'
-    //             }
-    //         })
-    //         .then(response => {
-    //             if(response.ok)
-    //                 return response.json();
-    //         })
-    //         .then(responseJson => {
-    //             let geojsonOptions = {
-    //                 clampToGround : true,
-    //                 stroke: Cesium.Color.YELLOW,
-    //                 fill: Cesium.Color.YELLOW
-    //             };
-    //             shuffle(responseJson);
-    //             for(let layerJson of responseJson)  {
-    //                 if(allDatasourcesNames.search(layerJson.tiledname) === null)    {
-    //                     allDatasourcesNames.insert(layerJson.tiledname);
-    //                     let jsonUrlOptions = {
-    //                         workspace: bbox.layer,
-    //                         service: 'WFS',
-    //                         version: '1.0.0',
-    //                         request: 'GetFeature',
-    //                         typeName: '' + bbox.layer + ':' + layerJson.tiledname,
-    //                         outputFormat: 'application/json'
-    //                     };
-    //                     let myJsonUrl = 'http://localhost:8080/geoserver/' + jsonUrlOptions.workspace + '/ows?service=' + jsonUrlOptions.service + '&version=' +jsonUrlOptions.version + '&request=' + jsonUrlOptions.request + '&typeName=' + jsonUrlOptions.typeName + '&outputFormat=' + jsonUrlOptions.outputFormat;
-    //
-    //                     let contourPromise = Cesium.GeoJsonDataSource.load(myJsonUrl, geojsonOptions);
-    //
-    //                     contourPromise.then((dataSource) => {
-    //                         viewer.dataSources.add(dataSource);
-    //                     })
-    //                     .otherwise((e) =>  {
-    //                         console.log(e);
-    //                     });
-    //                 }
-    //             }
-    //         })
-    //         .catch(err => {
-    //             console.log(err);
-    //         })
-    //     }
     // });
 })();
 
