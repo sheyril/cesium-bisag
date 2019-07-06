@@ -1,3 +1,4 @@
+// TODO: Change EventListener to ending motion of camera, NOT just moving
 'use strict';
 class Node
 {
@@ -224,104 +225,124 @@ let viewer = new Cesium.Viewer('cesiumContainer', {
     maximumRenderTimeChange : Infinity
 });
 
+//Arguments to constructor, full layer name <string>, zoomLevels <object: array of level:distance pairs>
+//zoomLevels format:
+// zoomLevels {
+//     pairs: [{
+//         upperBound : distance, :distance is the upper limit to show the tiles
+//         framelengthX: x, :the frame to be retreived to decrease load on server, implement later
+//         framelengthY: y
+//      }, ...]
+// }
 class TiledVectors  {
-    constructor(layer, zoomLevels)    {
+    constructor(layer, levels)    {
         this.layer = layer;
-        this.zoomLevels = zoomLevels;
+        this.levels = levels;
         this.allDatasourcesNames = new BST();
+    }
+}
+
+//Support for five levels till now
+class ZoomLevels    {
+    constructor(d0=0, d1=0, d2=0, d3=0, d4=0)
+    {
+        this.pairs = [{upperBound:d0}, {upperBound:d1}, {upperBound:d2}, {upperBound:d3}, {upperBound:d4}];
+        // this.pairs = [d0, d1, d2, d3, d4];
     }
 }
 
 TiledVectors.prototype.addTiledVectorDataSource = function()   {
     //Arrow function used to use current context, without arrow function, this doesnt bind inside event listener
     viewer.camera.changed.addEventListener(() => {
-        
+
         let scratchRectangle = new Cesium.Rectangle();
         var val = viewer.scene.camera.getPixelSize(Cesium.BoundingSphere.fromEllipsoid(viewer.scene.globe.ellipsoid), viewer.scene.drawingBufferWidth, viewer.scene.drawingBufferHeight);
         let rect = viewer.camera.computeViewRectangle(viewer.scene.globe.ellipsoid, scratchRectangle);
         let bbox = {
-            layer : '_my_contours',
+            layer : this.layer,
             min_x : Cesium.Math.toDegrees(rect.west),
             min_y : Cesium.Math.toDegrees(rect.south),
             max_x : Cesium.Math.toDegrees(rect.east),
-            max_y : Cesium.Math.toDegrees(rect.north)
+            max_y : Cesium.Math.toDegrees(rect.north),
+            zoom : 5   //default highest
         };
-
 
         //Note 1 degree: 111 km. use 0.5 degrees for problems
         let xsq = (bbox.max_x - bbox.min_x)*(bbox.max_x - bbox.min_x);
         let ysq = (bbox.max_y - bbox.min_y)*(bbox.max_y - bbox.min_y);
         let distance = Math.sqrt(xsq+ysq)*111;
-        console.log('distance: ', distance, 'pixelSize: ', val);
-        //height below 8000 is fine to start showing contours;
-
         // let height = ellipsoid.cartesianToCartographic(camera.position).height;
-        // var height = viewer.scene.globe.ellipsoid;
         // console.log(height);
 
-        // console.log(distance);
-        //Random Value
-        if(distance < 300 && distance > 30)   {
-            bbox.interval = 500;
+        if(distance < this.levels.pairs[0].upperBound)   {
+            //less than the distance required for zoom level 0
+            bbox.zoom = 0;
         }
-        else if(distance < 30)
-            bbox.interval = 100;
-        // else if(distance <= 30) {
-        //     bbox.interval = 10;
-        // }
-        else{
-            bbox.interval = 1000;
+        else if(distance < this.levels.pairs[1].upperBound)   {
+            //less than the distance required for zoom level 1
+            bbox.zoom = 1;
         }
-        //Sets intervals depending on the values
-        if(bbox.interval < 1000)    {
+        else if(distance < this.levels.pairs[2].upperBound)   {
+            //less than the distance required for zoom level 2
+            bbox.zoom = 2;
+        }
+        else if(distance < this.levels.pairs[3].upperBound)   {
+            //less than the distance required for zoom level 3
+            bbox.zoom = 3;
+        }
+        else if(distance < this.levels.pairs[4].upperBound)   {
+            //less than the distance required for zoom level 4
+            bbox.zoom = 4;
+        }
 
-            let vectorUrl = expressProxyBaseUrl + 'geoserver/tiledcontours?layer=' + bbox.layer + '&min_x=' + bbox.min_x + '&max_x=' + bbox.max_x + '&min_y=' + bbox.min_y + '&max_y=' + bbox.max_y + '&interval=' + bbox.interval;
-            fetch(vectorUrl, {
-                method: 'GET',
-                mode: 'cors',
-                headers: {
-                    'Accept' : 'application/json'
+        console.log('distance: ', distance, 'pixelSize: ', val, 'zoom: ', bbox.zoom);
+
+        let vectorUrl = expressProxyBaseUrl + 'geoserver/tiledcontours?layer=' + bbox.layer + '&min_x=' + bbox.min_x + '&max_x=' + bbox.max_x + '&min_y=' + bbox.min_y + '&max_y=' + bbox.max_y + '&zoom_level=' + bbox.zoom;
+        fetch(vectorUrl, {
+            method: 'GET',
+            mode: 'cors',
+            headers: {
+                'Accept' : 'application/json'
+            }
+        })
+        .then(response => {
+            if(response.ok)
+                return response.json();
+        })
+        .then(responseJson => {
+            let geojsonOptions = {
+                clampToGround : true,
+                stroke: Cesium.Color.YELLOW,
+                fill: Cesium.Color.YELLOW
+            };
+            shuffle(responseJson);
+            for(let layerJson of responseJson)  {
+                if(this.allDatasourcesNames.search(layerJson.tiledname) === null)    {
+                    this.allDatasourcesNames.insert(layerJson.tiledname);
+                    let jsonUrlOptions = {
+                        workspace: bbox.layer,
+                        service: 'WFS',
+                        version: '1.0.0',
+                        request: 'GetFeature',
+                        typeName: '' + bbox.layer + ':' + layerJson.tiledname,
+                        outputFormat: 'application/json'
+                    };
+                    let myJsonUrl = 'http://localhost:8080/geoserver/' + jsonUrlOptions.workspace + '/ows?service=' + jsonUrlOptions.service + '&version=' +jsonUrlOptions.version + '&request=' + jsonUrlOptions.request + '&typeName=' + jsonUrlOptions.typeName + '&outputFormat=' + jsonUrlOptions.outputFormat;
+
+                    let contourPromise = Cesium.GeoJsonDataSource.load(myJsonUrl, geojsonOptions);
+
+                    contourPromise.then((dataSource) => {
+                        viewer.dataSources.add(dataSource);
+                    })
+                    .otherwise((e) =>  {
+                        console.log(e);
+                    });
                 }
-            })
-            .then(response => {
-                if(response.ok)
-                    return response.json();
-            })
-            .then(responseJson => {
-                let geojsonOptions = {
-                    clampToGround : true,
-                    stroke: Cesium.Color.YELLOW,
-                    fill: Cesium.Color.YELLOW
-                };
-                shuffle(responseJson);
-                for(let layerJson of responseJson)  {
-                    if(this.allDatasourcesNames.search(layerJson.tiledname) === null)    {
-                        this.allDatasourcesNames.insert(layerJson.tiledname);
-                        let jsonUrlOptions = {
-                            workspace: bbox.layer,
-                            service: 'WFS',
-                            version: '1.0.0',
-                            request: 'GetFeature',
-                            typeName: '' + bbox.layer + ':' + layerJson.tiledname,
-                            outputFormat: 'application/json'
-                        };
-                        let myJsonUrl = 'http://localhost:8080/geoserver/' + jsonUrlOptions.workspace + '/ows?service=' + jsonUrlOptions.service + '&version=' +jsonUrlOptions.version + '&request=' + jsonUrlOptions.request + '&typeName=' + jsonUrlOptions.typeName + '&outputFormat=' + jsonUrlOptions.outputFormat;
-
-                        let contourPromise = Cesium.GeoJsonDataSource.load(myJsonUrl, geojsonOptions);
-
-                        contourPromise.then((dataSource) => {
-                            viewer.dataSources.add(dataSource);
-                        })
-                        .otherwise((e) =>  {
-                            console.log(e);
-                        });
-                    }
-                }
-            })
-            .catch(err => {
-                console.log(err);
-            });
-        }
+            }
+        })
+        .catch(err => {
+            console.log(err);
+        });
     });
 };
 
@@ -349,8 +370,14 @@ TiledVectors.prototype.addTiledVectorDataSource = function()   {
     });
     viewer.terrainProvider = tp;
 
-    let contours = new TiledVectors('abc', 1);
+    // let a = new BST();
+    // let zl = new ZoomLevels(30, 300, 0, 0, 0);
+    // console.log(zl);
+    // console.log(a);
+    let contours = new TiledVectors('_my_contours', new ZoomLevels(30, 300));
+    // console.log(contours.levels.pairs[0]);
     contours.addTiledVectorDataSource();
+
     // viewer.camera.flyTo({
     //     destination : Cesium.Cartesian3.fromDegrees(92, 22),
     //     height: 30000,
