@@ -47,7 +47,7 @@ schema.prototype.deleteFeature = function(fileNameInTable) {
         str = "DROP TABLE IF EXISTS " + this.name + '.' + fileNameInTable;
         sh("echo " + str + "> " + path.join(convention.sqlPrepared ,"temp.sql"))
             .then(value => {
-                return sh(this.psqlCommand + ' -f temp.sql');
+                return sh(this.psqlCommand + ' -f ' + path.join(convention.sqlPrepared, temp.sql));
             })
             .then(value => {
                 if(value.stdout === '' && value.stderr !== '')  {
