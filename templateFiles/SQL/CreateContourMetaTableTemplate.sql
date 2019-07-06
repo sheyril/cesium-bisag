@@ -1,6 +1,7 @@
 CREATE SCHEMA __layername__;
 CREATE TABLE __layername__.__layername__ (
     interval_length SMALLINT NOT NULL,
+    zoom_level SMALLINT NOT NULL,
     min_x DOUBLE PRECISION NOT NULL,
     max_x DOUBLE PRECISION NOT NULL,
     min_y DOUBLE PRECISION NOT NULL,

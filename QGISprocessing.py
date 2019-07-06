@@ -86,7 +86,7 @@ class QGISwrapper:
         file_writer = QgsRasterFileWriter(outp)
         file_writer.writeRaster(pipe, width, height, extent, rlayer.crs())
 
-    def ContoursUsingClip(self, inpLayer, outputFolder, layerName, bands, interval, tileSize):
+    def ContoursUsingClip(self, inpLayer, outputFolder, layerName, bands, interval, tileSize, zoomLevel):
         import os;
         layer = QgsRasterLayer(inpLayer);
         self.generateContour(inpLayer, './temporaryFiles/tiles/test.shp', bands, interval);
@@ -108,7 +108,7 @@ class QGISwrapper:
                 nextY = y + pixelSizeY*tileSize;
                 if(nextY > yMax):
                     nextY = yMax;
-                outLayerName = '_' + str(interval) + '_' + str(x) + '_' + str(nextX) + '_' + str(y) + '_' + str(nextY)  + '_' + layerName + '.shp';
+                outLayerName = '_' + str(zoomLevel) + '_' + str(interval) + '_' + str(x) + '_' + str(nextX) + '_' + str(y) + '_' + str(nextY)  + '_' + layerName + '.shp';
                 outLayerPath = p / outLayerName;
                 outLayerPath = str(outLayerPath);
                 os.system('ogr2ogr -f \"ESRI Shapefile\" -clipsrc ' + str(x) + ' ' + str(y) + ' ' + str(nextX) + ' ' + str(nextY) + ' ' + outLayerPath + ' ./temporaryFiles/tiles/test.shp');
@@ -149,7 +149,8 @@ elif method == "prepareTiledContours":
     bands = int(jsonObject['layer']['bands']);
     intervals = jsonObject['layer']['intervals'];
     tileSizes = jsonObject['layer']['tileSizes'];
+    zoomLevels = jsonObject['layer']['zoomLevels'];
     for i in range(0, len(intervals)):
-        myQgs.ContoursUsingClip(inplayer, outpfold, lName, bands, int(intervals[i]), int(tileSizes[i]));
-
+        myQgs.ContoursUsingClip(inplayer, outpfold, lName, bands, int(intervals[i]), int(tileSizes[i]), int(zoomLevels[i]));
+    f.close();
 myQgs.endApplication();

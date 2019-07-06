@@ -216,11 +216,12 @@ function PrepareInsertionsForMetaTable(jsonLayerObject)    {
                 if(path.extname(file) === '.shp')   {
                     let script = fs.readFileSync(path.join(convention.sqlTemplates, 'addToContourMetaTableTemplate.sql'), 'utf-8');
                     let nameArr = path.basename(file, '.shp').split('_');
-                    script = script.replace('INTERVAL__LENGTH', nameArr[1]);
-                    script = script.replace('MIN__X', nameArr[2]);
-                    script = script.replace('MAX__X', nameArr[3]);
-                    script = script.replace('MIN__Y', nameArr[4]);
-                    script = script.replace('MAX__Y', nameArr[5]);
+                    script = script.replace('ZOOM__LEVEL', nameArr[1]);
+                    script = script.replace('INTERVAL__LENGTH', nameArr[2]);
+                    script = script.replace('MIN__X', nameArr[3]);
+                    script = script.replace('MAX__X', nameArr[4]);
+                    script = script.replace('MIN__Y', nameArr[5]);
+                    script = script.replace('MAX__Y', nameArr[6]);
                     script = script.replace('__layername__', layer.layerName);
                     script = script.replace('__layername__', layer.layerName);
                     tiledTableName = layer.layerName + '_' + count ;
