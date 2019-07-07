@@ -11,47 +11,6 @@ class Node
     }
 }
 
-// Node.prototype.isLess = function(node2) {
-//     // console.log('in isLess');
-//     if(this.data.interval_length < node2.data.interval_length)    {
-//         return true;
-//     }
-//     else {
-//         if(this.data.min_x < node2.data.min_x)    {
-//             return true;
-//         }
-//         else if(this.data.min_x === node2.data.min_x) {
-//             if(this.data.min_y < node2.data.min_y)
-//                 return true;
-//             else {
-//                 return false;
-//             }
-//         }
-//         else {
-//             return false;
-//         }
-//     }
-// }
-//
-// Node.prototype.isGreater = function(node2) {
-//     if(this.data.interval_length > node2.data.interval_length)  {
-//         return true;
-//     }
-//     else {
-//         if(this.data.min_x > node2.data.min_x)    {
-//             return true;
-//         }
-//         else if(this.data.min_x === node2.data.min_x) {
-//             if(this.data.min_y > node2.data.min_y)
-//                 return true;
-//             else
-//                 return false;
-//         }
-//         else {
-//             return false;
-//         }
-//     }
-// }
 
 Node.prototype.isLess = function(node2)    {
     if(this.data < node2.data)  {
@@ -60,7 +19,7 @@ Node.prototype.isLess = function(node2)    {
     else {
         return false;
     }
-}
+};
 
 Node.prototype.isGreater = function(node2) {
     if(this.data > node2.data)  {
@@ -69,7 +28,7 @@ Node.prototype.isGreater = function(node2) {
     else {
         return false;
     }
-}
+};
 
 class BST
 {
@@ -85,7 +44,7 @@ BST.prototype.insert = function(data) {
         this.root = newNode;
     else
         this.insertNode(this.root, newNode);
-}
+};
 
 BST.prototype.insertNode = function(node, newNode) {
     if(newNode.isLess(node))
@@ -102,7 +61,7 @@ BST.prototype.insertNode = function(node, newNode) {
         else
             this.insertNode(node.right,newNode);
     }
-}
+};
 
 BST.prototype.findMinNode = function(node)
 {
@@ -110,13 +69,13 @@ BST.prototype.findMinNode = function(node)
         return node;
     else
         return this.findMinNode(node.left);
-}
+};
 
 BST.prototype.remove = function(data)
 {
     let key = new Node(data);
     this.root = this.removeNode(this.root, data);
-}
+};
 
 BST.prototype.removeNode = function(node, key)
 {
@@ -155,8 +114,7 @@ BST.prototype.removeNode = function(node, key)
         node.right = this.removeNode(node.right, aux.data);
         return node;
     }
-
-}
+};
 
 BST.prototype.searchNode = function(node, key)  {
     if(node === null)
@@ -170,7 +128,7 @@ BST.prototype.searchNode = function(node, key)  {
     else {
         return node;
     }
-}
+};
 
 BST.prototype.search = function(data) {
     let key = new Node(data);
@@ -182,7 +140,7 @@ BST.prototype.search = function(data) {
     else {
         return searched.data;
     }
-}
+};
 
 BST.prototype.inorder = function(node)
 {
@@ -192,12 +150,101 @@ BST.prototype.inorder = function(node)
         console.log(node.data);
         this.inorder(node.right);
     }
-}
+};
 
 BST.prototype.getRootNode = function()
 {
     return this.root;
+};
+
+class NodeSource {
+    constructor(data)   {
+        this.data = data;
+        this.left = null;
+        this.right = null;
+    }
 }
+
+NodeSource.prototype.isLess = function(node2) {
+    // console.log('in isLess');
+    if(this.data.zoom_level < node2.data.zoom_level)    {
+        return true;
+    }
+    else if(this.data.zoom_level === node2.data.zoom_level) {
+        if(this.data.min_x < node2.data.min_x)    {
+            return true;
+        }
+        else if(this.data.min_x === node2.data.min_x) {
+            if(this.data.min_y < node2.data.min_y)
+                return true;
+            else {
+                return false;
+            }
+        }
+        else {
+            return false;
+        }
+    }
+    else    {
+        return false;
+    }
+};
+
+NodeSource.prototype.isGreater = function(node2) {
+    if(this.data.zoom_level > node2.data.zoom_level)  {
+        return true;
+    }
+    else if(this.data.zoom_level === node2.data.zoom_level) {
+        if(this.data.min_x > node2.data.min_x)    {
+            return true;
+        }
+        else if(this.data.min_x === node2.data.min_x) {
+            if(this.data.min_y > node2.data.min_y)
+                return true;
+            else
+                return false;
+        }
+        else {
+            return false;
+        }
+    }
+    else    {
+        return false;
+    }
+};
+
+class sourcesBST extends BST    {
+    constructor()
+    {
+        super();
+    }
+}
+
+sourcesBST.prototype.search = function(data)    {
+    let key = new NodeSource(data);
+    // let searched = this.searchNode(this.root, key);
+    let searched;
+    if((searched=this.searchNode(this.root,key)) === null) {
+        return null;
+    }
+    else {
+        return searched.data;
+    }
+};
+
+sourcesBST.prototype.remove = function(data)
+{
+    let key = new NodeSource(data);
+    this.root = this.removeNode(this.root, data);
+};
+
+sourcesBST.prototype.insert = function(data) {
+    let newNode = new NodeSource(data);
+    if(this.root === null)
+        this.root = newNode;
+    else
+        this.insertNode(this.root, newNode);
+};
 
 //Permutes the array so that tree is not skewed
 function shuffle(array) {
@@ -226,15 +273,27 @@ let viewer = new Cesium.Viewer('cesiumContainer', {
     maximumRenderTimeChange : Infinity
 });
 
-class RectangleExtentFrame {
-    constructor(min_x, min_y, max_x, max_y) {
+class VectorFrame {
+    constructor(min_x, min_y, max_x, max_y, zoom, factor) {
         this.min_x = min_x;
         this.min_y = min_y;
         this.max_x = max_x;
         this.max_y = max_y;
+        this.factor = factor;
+        this.dataSources = [];
     }
 }
 
+// VectorFrame.prototype.isTooFar(x, y, zoom)    {
+
+// }
+
+class pair  {
+    constructor(upperBound, frameFactor)  {
+        this.upperbound = bound;
+        this.frameFactor = factor;
+    }
+}
 //Support for five levels till now
 class ZoomLevels    {
     constructor(d0=0, d1=0, d2=0, d3=0, d4=0)
@@ -249,16 +308,16 @@ class ZoomLevels    {
     }
 }
 
-ZoomLevels.prototype.pushFrame()  {
+// ZoomLevels.prototype.pushFrame()  {
 
-}
+// }
 
 class TiledVectors  {
     constructor(layer, levels)    {
         this.layer = layer;             //argument type: String
         this.levels = levels;           //argument type: ZoomLevels object
         this.addedDataSources = new BST();
-        this.requestedDataSources = new BST();
+        this.requestedDataSources = new sourcesBST();
     }
 }
 
@@ -384,6 +443,10 @@ TiledVectors.prototype.addTiledVectorDataSource = function()   {
     // console.log(zl);
     // console.log(a);
     let contours = new TiledVectors('_my_contours', new ZoomLevels(30, 300));
+    // if (document.getElementById('contours').checked)    {
+    //     // contours.addTiledVectorDataSource();
+    //     console.log('heyyyyyy');
+    // }
     contours.addTiledVectorDataSource();
 
     // viewer.camera.flyTo({

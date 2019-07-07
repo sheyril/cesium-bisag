@@ -32,14 +32,13 @@ async function addTiledContoursToExistingTable(jsonLayerFile, geoserverConnectio
         tableInfoJsonObject = value.tableInfoJsonObject;
         console.log('insertion file created');
         console.log('inserting into table');
-        await checkRowsOfEachTileAndTrim(jsonLayerObject, tableInfoJsonObject, geoserverConnectionObj);
         sqlOutput = await geoserverConnectionObj.schema.runSqlFile(value.filepath);
         console.log('All insertions in meta table done, OK');
 
         let publishedResp = await publishTiledContours(jsonLayerObject, tableInfoJsonObject, geoserverConnectionObj);
         if(publishedResp.statusCode >= 300 || publishedResp.statusCode < 200)
             throw new Error('could not publish features to workspace : ' + jsonLayerObject.layer.layerName);
-
+        await checkRowsOfEachTileAndTrim(jsonLayerObject, tableInfoJsonObject, geoserverConnectionObj);
     }
     catch(e) {
         console.log('could not generate tiled contours');

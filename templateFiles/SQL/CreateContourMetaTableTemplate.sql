@@ -14,3 +14,9 @@ CREATE INDEX __indexname__ ON __layername__.__layername__ (
     min_x,
     min_y
 );
+
+CREATE TABLE __layername__.zoom_reference (
+    zoom_level SMALLINT PRIMARY KEY,
+    delta_x DOUBLE PRECISION NOT NULL,
+    delta_y DOUBLE PRECISION NOT NULL
+);
