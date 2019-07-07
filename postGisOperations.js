@@ -16,6 +16,7 @@ const path = require('path');
   * @property {string} name - Name of database
   * @property {string} user - Username for Role in the database, used for authentication
   * @property {string} pwd - Password for Role in the database, used for authentication
+
   * @param {string} host - Host of the Postgres server
   * @param {number|string} port - Port of the Postgres server
   * @param {string} name - Name of database
@@ -23,10 +24,6 @@ const path = require('path');
   * @param {string} pwd - Password for Role in the database, used for authentication
 */
 class database  {
-    /**
-     * Create an instance of connected Postgres database
-     * @constructor
-    */
     constructor( host, port, name, user, pwd)    {
         this.name = name;
         this.user = user;
@@ -47,10 +44,6 @@ class database  {
   * @returns {schema} The instance to represent the Schema
 */
 class schema    {
-    /**
-     * @constructor
-
-    */
     constructor(db, name='public')   {
         this.name = name;
         this.db = db;

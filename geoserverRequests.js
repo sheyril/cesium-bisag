@@ -47,7 +47,6 @@ class cleanFolderError extends Error {}
   * @property {function} getMapWMS - Makes a WMS request to geoserver
 */
 class geoserverConnection	{
-	/**@constructor*/
 	constructor(baseHostName, user, pwd, sch)	{
 		this.baseHostName = baseHostName;
 		this.user = user;
