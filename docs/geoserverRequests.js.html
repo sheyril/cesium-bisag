@@ -1,4 +1,32 @@
-//Complete data store deletion of JDBC store, everything else is stable
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: geoserverRequests.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: geoserverRequests.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>//Complete data store deletion of JDBC store, everything else is stable
 /**
   * This module contains the class to represent a geosrver connection and various methods to publish, delete and prepare data for geoserver
   * @module geoserverRequests
@@ -79,7 +107,7 @@ geoserverConnection.prototype.layerNameConvention = function(FullLayerName)	{
   * @param {string} layerName - Name of the Raster Layer which would be shown on geoserver and PostGIS after conversion to JDBC ImageMosaic
   * @param {string} [srid='EPSG:4326'] - SRS of the Raster Layer
   * @param {string|number} [interpolation='1'] - Interpolation to be used to make coverage
-  * @returns {Promise<{outpath: string, layerName : layerName}>} - Returns a promise that resolves once the mapping file is generated. The object returned contains path to mapping file and the name of the layer successfully
+  * @returns {Promise&lt;{outpath: string, layerName : layerName}>} - Returns a promise that resolves once the mapping file is generated. The object returned contains path to mapping file and the name of the layer successfully
 */
 // NOTE: Would not let you create a mapping file if it already exists, would help prevent miserable errors
 geoserverConnection.prototype.createJdbcMapping = function(layerName, srid='EPSG:4326', interpolation='1')	{
@@ -124,7 +152,7 @@ geoserverConnection.prototype.createJdbcMapping = function(layerName, srid='EPSG
   * @param {string} tileDirectory - Path to the directory to be used to temporarily store tiles and pyramids created for Mosaic (Note: It does not delete the contents after generating them, the main function createJdbcCoverageFromRaster does)
   * @param {string|number} [levels=2] - Number of levels to be created for the pyramid
   * @param {string} [srid='EPSG:4326'] - SRS of the Raster Layer
-  * @returns {Promise<null>} - A Promise that is resolved when a Table is added and data is imported to PostGIS successfully
+  * @returns {Promise&lt;null>} - A Promise that is resolved when a Table is added and data is imported to PostGIS successfully
 */
 geoserverConnection.prototype.addJdbcTableToPostgis = async function(mappingFilePath, layerName, tileDirectory, levels=2, srid='EPSG:4326')	{
 	try {
@@ -136,13 +164,13 @@ geoserverConnection.prototype.addJdbcTableToPostgis = async function(mappingFile
 		shOutput = await sh('java -jar ' + convention.jdbcPluginPath + ' ddl -config ' + mappingFilePath + ' -spatialTNPrefix ' + layerName + '_tiled -pyramids ' + levels + ' -statementDelim ";" -srs ' + srid + ' -targetDir ' + path.join(__dirname, convention.sqlPrepared));
 
 		shOutput = await sh(this.schema.psqlCommand + ' -f ' + path.join(__dirname, convention.sqlPrepared,'createmeta.sql'));
-		if(shOutput.stdout === '' && shOutput.stderr !== '')
+		if(shOutput.stdout === '' &amp;&amp; shOutput.stderr !== '')
 		{
 			console.log('failed at making new meta table, continuing');
 		}
 
 		shOutput = await sh(this.schema.psqlCommand + ' -f ' + path.join(__dirname, convention.sqlPrepared,'add_'+layerName+'.sql'));
-		if(shOutput.stdout === '' && shOutput.stderr !== '')
+		if(shOutput.stdout === '' &amp;&amp; shOutput.stderr !== '')
 		{
 			//rollback
 			if(fs.existsSync(mappingFilePath))
@@ -165,7 +193,7 @@ geoserverConnection.prototype.addJdbcTableToPostgis = async function(mappingFile
 			fs.unlinkSync(mappingFilePath);
 
 		let shOutput = await sh(this.schema.psqlCommand + ' -f ' + path.join(__dirname, convention.sqlPrepared,'remove_'+layerName+'.sql'));
-		if(shOutput.stdout === '' && shOutput.stderr !== '')
+		if(shOutput.stdout === '' &amp;&amp; shOutput.stderr !== '')
 			throw new sqlError('could not remove tiledTables');
 		rimraf(path.join(tileDirectory, '*'), (err, data) => {
 			if(err)	{
@@ -182,7 +210,7 @@ geoserverConnection.prototype.addJdbcTableToPostgis = async function(mappingFile
   * @param {string} namespace - workspace/namespace of geoserver in which store has to be created
   * @param {string} layerName - Name of the layer
   * @param {string} mappingFilePath - Path to the mapping file used for JDBC addJdbcImageMosaic.
-  * @returns {Promise<{resp:string, body: string, storeName: string, outpath: string}>} - Returns a promise that is resolved when the store is created in geoserver successfully
+  * @returns {Promise&lt;{resp:string, body: string, storeName: string, outpath: string}>} - Returns a promise that is resolved when the store is created in geoserver successfully
 */
 // NOTE: have to create meta table first
 geoserverConnection.prototype.addJdbcStoreFromPostgisToGeoserver = function(namespace, layerName, mappingFilePath)	{
@@ -215,7 +243,7 @@ geoserverConnection.prototype.addJdbcStoreFromPostgisToGeoserver = function(name
 				console.log(options.url);
 				request(options, (err, resp, body) => {
 					if(!err)	{
-						if(resp.statusCode >= 200 && resp.statusCode < 300)
+						if(resp.statusCode >= 200 &amp;&amp; resp.statusCode &lt; 300)
 							resolve({resp: resp, body: body, storeName: layerName, outpath:mappingFilePath});
 						else 	{
 							console.log(resp.statusCode);
@@ -237,7 +265,7 @@ geoserverConnection.prototype.addJdbcStoreFromPostgisToGeoserver = function(name
   * @param {string} layerName - Name of the Layer to be published
   * @param {string} workspaceName - Name of the workspace the layer has to be published in
   * @param {string} datastoreName - Name of the DataStore the layer has to be published from
-  * @returns {Promise<{resp: string, body: string, storeName: string, layerName: string}>} - Returns a promise that is resolved when the coverage is published to geoserver successfully
+  * @returns {Promise&lt;{resp: string, body: string, storeName: string, layerName: string}>} - Returns a promise that is resolved when the coverage is published to geoserver successfully
 */
 geoserverConnection.prototype.publishCoverageFromDataStore = function(layerName, workspaceName, datastoreName)	{
     return new Promise((resolve, reject) => {
@@ -249,13 +277,13 @@ geoserverConnection.prototype.publishCoverageFromDataStore = function(layerName,
     			username: this.user,
     			password: this.pwd
     		},
-    		body: '<coverage><name>' + layerName + '</name><nativeCoverageName>' + layerName + '</nativeCoverageName></coverage>'
+    		body: '&lt;coverage>&lt;name>' + layerName + '&lt;/name>&lt;nativeCoverageName>' + layerName + '&lt;/nativeCoverageName>&lt;/coverage>'
     	};
 		request(options, (err, resp, body) => {
 			if(err)
 				reject(err);
 			else {
-				if(resp.statusCode >= 200 && resp.statusCode < 300)
+				if(resp.statusCode >= 200 &amp;&amp; resp.statusCode &lt; 300)
 					resolve({resp: resp, body: body, storeName: datastoreName, layerName:layerName});
 				else 	{
 					console.log(resp.statusCode);
@@ -278,7 +306,7 @@ geoserverConnection.prototype.publishCoverageFromDataStore = function(layerName,
   * @param {string} srid - SRS of the raster layer. (If wrong SRS given the layer preview would be blank on geoserver)
   * @param {number} tileSize - Size of an individual tile in pixels
   * @param {number} [interpolation=1] - interpolation to be used. Mostly the default value 1 is used. For custom interpolation visit the official website and see tutorials on use of JDBC ImageMosaic. If you are not sure let it go to default
-  * @returns {Promise<{layerName: string, workspace: string, storeName: string}>} - Returns a promise that is resolved when the raster has been converted to JDBC ImageMosaic and published successfully
+  * @returns {Promise&lt;{layerName: string, workspace: string, storeName: string}>} - Returns a promise that is resolved when the raster has been converted to JDBC ImageMosaic and published successfully
 */
 geoserverConnection.prototype.createJdbcCoverageFromRaster = async function(layerPath, layerName, workspace, tileDir, levels=2, srid='EPSG:4326', tileSize=1024, interpolation = 1) {
 	layerName = this.layerNameConvention(layerName);
@@ -321,7 +349,7 @@ geoserverConnection.prototype.createJdbcCoverageFromRaster = async function(laye
 		//rollback
 		// await this.deleteDataStoreRecursively(workspace, value.storeName);
 		let shOutput = await sh(this.schema.psqlCommand + ' -f ' + path.join(__dirname, convention.sqlPrepared,'remove_'+layerName+'.sql'));
-		if(shOutput.stdout === '' && shOutput.stderr !== '')
+		if(shOutput.stdout === '' &amp;&amp; shOutput.stderr !== '')
 			throw new sqlError('could not remove tiledTables');
 		rimraf(path.join(tileDirectory, '*'), (err, data) => {
 			if(err)	{
@@ -350,7 +378,7 @@ geoserverConnection.prototype.createJdbcCoverageFromRaster = async function(laye
 
 /**Creates a new Namespace/Workspace in geoserver
   * @param {string} namespace - Name of the Namespace/Workspace to be created
-  * @returns {Promise<resp: string, body: string>} - A promise that is resolved when a new namespace is created successfully
+  * @returns {Promise&lt;resp: string, body: string>} - A promise that is resolved when a new namespace is created successfully
 */
 geoserverConnection.prototype.addNamespace = function(namespace)	{
 	return new Promise((resolve, reject) => {
@@ -375,7 +403,7 @@ geoserverConnection.prototype.addNamespace = function(namespace)	{
     		};
             request(options, (err, resp, body) => {
     			if(!err)	{
-					if(resp.statusCode >= 200 && resp.statusCode < 300)
+					if(resp.statusCode >= 200 &amp;&amp; resp.statusCode &lt; 300)
 						resolve({resp: resp, body: body});
 					else 	{
 						console.log(resp.statusCode);
@@ -393,7 +421,7 @@ geoserverConnection.prototype.addNamespace = function(namespace)	{
 /** Deletes an existing namespace/workspace from geoserver. Note: If there is some error in deleting the namespace try deleting all datastores, coveragestores and layers from the namespace
   * @method
   * @param {string} namespace - Name of the workspace/namespace to be deleted
-  * @returns {Promise<resp: string, body: string>} - Returns a promise that is resolved if the namespace is deleted successfully
+  * @returns {Promise&lt;resp: string, body: string>} - Returns a promise that is resolved if the namespace is deleted successfully
 */
 geoserverConnection.prototype.deleteNamespace = function(namespace)	{
     return new Promise((resolve, reject) => {
@@ -411,7 +439,7 @@ geoserverConnection.prototype.deleteNamespace = function(namespace)	{
     	};
     	request(options, (err, resp, body) => {
 			if(!err)	{
-				if(resp.statusCode >= 200 && resp.statusCode < 300)
+				if(resp.statusCode >= 200 &amp;&amp; resp.statusCode &lt; 300)
 					resolve({resp: resp, body: body});
 				else 	{
 					console.log(resp.statusCode);
@@ -429,7 +457,7 @@ geoserverConnection.prototype.deleteNamespace = function(namespace)	{
   * @method
   * @param {string} storeWorkspace - Workspace/Namespace in which store has to be created
   * @param {string} storeName - Name of the store to be created
-  * @returns {Promise<{resp: string, body: string}>} - Returns a promise that is resolved if the datastore has been added successfully
+  * @returns {Promise&lt;{resp: string, body: string}>} - Returns a promise that is resolved if the datastore has been added successfully
 */
 geoserverConnection.prototype.addPostgisDatastore = function(storeWorkspace, storeName)  {
     return new Promise((resolve, reject) => {
@@ -458,7 +486,7 @@ geoserverConnection.prototype.addPostgisDatastore = function(storeWorkspace, sto
             };
             request(options, (err, resp, body) => 	{
 				if(!err)	{
-					if(resp.statusCode >= 200 && resp.statusCode < 300)
+					if(resp.statusCode >= 200 &amp;&amp; resp.statusCode &lt; 300)
 						resolve({resp: resp, body: body});
 					else 	{
 						reject(resp);
@@ -476,7 +504,7 @@ geoserverConnection.prototype.addPostgisDatastore = function(storeWorkspace, sto
   * @method
   * @param {string} storeWorkspace - Workspace in which datastore to be deleted exists
   * @param {string} storeName - Name of the store to be deleted
-  * @returns {Promise<{resp: string, body: string}>} - Returns a promise that is resolved if the datastore is deleted successfully
+  * @returns {Promise&lt;{resp: string, body: string}>} - Returns a promise that is resolved if the datastore is deleted successfully
 */
 geoserverConnection.prototype.deleteDataStoreRecursively = function(storeWorkspace, storeName)	{
     return new Promise((resolve, reject) => {
@@ -497,7 +525,7 @@ geoserverConnection.prototype.deleteDataStoreRecursively = function(storeWorkspa
     	console.log(this.user, this.pwd);
     	request(options, (err, resp, body) => {
 			if(!err)	{
-				if(resp.statusCode >= 200 && resp.statusCode < 300)	{
+				if(resp.statusCode >= 200 &amp;&amp; resp.statusCode &lt; 300)	{
 					resolve({resp: resp, body: body});
 				}
 				else 	{
@@ -517,7 +545,7 @@ geoserverConnection.prototype.deleteDataStoreRecursively = function(storeWorkspa
   * @param {string} featureName
   * @param {string} workspaceName
   * @param {string} datastoreName
-  * @returns {Promise<{resp: string, body: string}>} - A promise that is resolved if the feature is published from datastore successfully
+  * @returns {Promise&lt;{resp: string, body: string}>} - A promise that is resolved if the feature is published from datastore successfully
 */
 geoserverConnection.prototype.publishFeatureFromDataStore = function(featureName, workspaceName, datastoreName)	{
     return new Promise((resolve, reject) => {
@@ -529,11 +557,11 @@ geoserverConnection.prototype.publishFeatureFromDataStore = function(featureName
     			username: this.user,
     			password: this.pwd
     		},
-    		body: '<featureType><name>' + featureName + '</name></featureType>'
+    		body: '&lt;featureType>&lt;name>' + featureName + '&lt;/name>&lt;/featureType>'
     	};
 		request(options, (err, resp, body) => {
 			if(!err)	{
-				if(resp.statusCode >= 200 && resp.statusCode < 300)
+				if(resp.statusCode >= 200 &amp;&amp; resp.statusCode &lt; 300)
 					resolve({resp: resp, body: body});
 				else 	{
 					reject(resp);
@@ -553,7 +581,7 @@ geoserverConnection.prototype.publishFeatureFromDataStore = function(featureName
   * @param {string} srid - SRS of the Vector layer
   * @param {string} workspaceName - Name of the workspace in which feature is to be inserted
   * @param {string} datastoreName - Name of the datastore from which vector layer is to be published
-  * @returns {Promise<{resp: string, body: string}>} - Returns a promise that is resolved if the feature is published successfully
+  * @returns {Promise&lt;{resp: string, body: string}>} - Returns a promise that is resolved if the feature is published successfully
 */
 geoserverConnection.prototype.publishFeature = function(featurePath, featureName, srid, workspaceName, datastoreName)	{
     return new Promise((resolve, reject) => {
@@ -573,7 +601,7 @@ geoserverConnection.prototype.publishFeature = function(featurePath, featureName
 
 /** Deletes a VectorLayer/Feature from geoserver and the PostGIS database. NOTE: Data is lost be careful with this function
   * @param {string} passedLayer - Full name of the layer to be deleted from geoserver. Format of layername: 'workspaceName:layerName'
-  * @returns {Promise<stdout: string, stderr: string>} - Returns a promise that is resolved when the feature is deleted successfully
+  * @returns {Promise&lt;stdout: string, stderr: string>} - Returns a promise that is resolved when the feature is deleted successfully
 */
 geoserverConnection.prototype.deleteFeature = function(passedLayer)	{
     return new Promise((resolve, reject) => {
@@ -614,7 +642,7 @@ geoserverConnection.prototype.deleteFeature = function(passedLayer)	{
 /** Makes a WMS getMap request to geoserver. Some changes have been made. Check if the function works
   * @param {string} passedLayer - full name of the layer to be requested from geoserver. Format of layername: 'workspaceName:layerName'
   * @param {string} layerFolderPath - Path where the requested layer has to be written/outputted
-  * @returns {Promise<{outpath: string, srid: string, bbox: string}>} - Returns a promise that is resolved if the request was successful
+  * @returns {Promise&lt;{outpath: string, srid: string, bbox: string}>} - Returns a promise that is resolved if the request was successful
 */
 geoserverConnection.prototype.getMapWMS = function(passedLayer, layerFolderPath)	{
 
@@ -697,3 +725,26 @@ geoserverConnection.prototype.getMapWMS = function(passedLayer, layerFolderPath)
 module.exports = {
 	geoserverConnection : geoserverConnection
 }
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-convention.html">convention</a></li><li><a href="module-geoserverRequests.html">geoserverRequests</a></li><li><a href="module-layerProcessing.html">layerProcessing</a></li><li><a href="module-postGisOperations.html">postGisOperations</a></li><li><a href="module-useCommandLine.html">useCommandLine</a></li></ul><h3>Classes</h3><ul><li><a href="module-geoserverRequests-geoserverConnection.html">geoserverConnection</a></li><li><a href="module-postGisOperations-database.html">database</a></li><li><a href="module-postGisOperations-schema.html">schema</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.2</a> on Mon Jul 08 2019 01:01:22 GMT+0530 (India Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

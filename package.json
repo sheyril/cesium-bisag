@@ -36,5 +36,8 @@
     "wms-capabilities": "^0.4.0",
     "xmldom": "^0.1.27",
     "yargs": "^13.2.4"
+  },
+  "dependencies": {
+    "jsdoc": "^3.6.2"
   }
 }

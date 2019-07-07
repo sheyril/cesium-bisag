@@ -28,7 +28,6 @@
     app.use(compression());
     app.use(cors());
     app.get('/geoserver/*/wms', function(req, res, next)  {
-        // console.log('got wms req');
         try {
             request.get(geoserverLink+req.url, {encoding:'binary'}, function(error, response)   {
                 res.writeHead(200, {'Content-Type':'image/jpeg'});
