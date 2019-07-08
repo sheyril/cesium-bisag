@@ -1,4 +1,4 @@
-# Cesium-BISAG
+## Cesium-BISAG
 Experimentations with terrain elevation data for generating and serving 3D Tilesets
 
 
@@ -34,7 +34,7 @@ Cesium Terrain server requirements:
 
 Setting up the terrain files for serving,
 
-If the folder system is like this:
+If the folder system is like this:  
 
 	/data/files/
 	├── rasters
@@ -43,18 +43,22 @@ If the folder system is like this:
 	    └── terrain 
 
 To create terrain tiles from DEM files, 
-1. To load cesium terrain builder in docker, in the bash shell run:
+1. To load cesium terrain builder in docker, in the bash shell run:  
+
 	`docker run -t -i homme/cesium-terrain-builder:latest /bin/bash`
 
 2. To check that the cesium terrain builder has been sucessfully loaded, run:
+  
 	`ctb-tile --version`
 
-3. To mount data from host directory in the docker container, run:
+3. To mount data from host directory in the docker container, run:  
+
 	`docker run -v /data/files:/data -t -i homme/cesium-terrain-builder:latest bash`
 
 	Here, the host directory **/data/files** is mapped to to **/data** in the container.
 
 4. To tile the file **/data/rasters/DEM.tif**, run the command:
+
 		`ctb-tile --output-dir /data/tilesets/terrain/test /data/rasters/DEM.tif`
 
 	You will find various .terrain files in the directory: **/data/tilesets/terrain/test**
