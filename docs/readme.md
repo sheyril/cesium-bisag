@@ -48,7 +48,7 @@ To create terrain tiles from DEM files,
 	`docker run -t -i homme/cesium-terrain-builder:latest /bin/bash`
 
 2. To check that the cesium terrain builder has been sucessfully loaded, run:
-  
+
 	`ctb-tile --version`
 
 3. To mount data from host directory in the docker container, run:  
@@ -59,14 +59,14 @@ To create terrain tiles from DEM files,
 
 4. To tile the file **/data/rasters/DEM.tif**, run the command:
 
-		`ctb-tile --output-dir /data/tilesets/terrain/test /data/rasters/DEM.tif`
+	`ctb-tile --output-dir /data/tilesets/terrain/test /data/rasters/DEM.tif`
 
 	You will find various .terrain files in the directory: **/data/tilesets/terrain/test**
 
 To run the cesium terrain server to visualise the terrain tiles, run:
 
-	`docker run -p 8080:8000 -v /data/docker/tilesets/terrain:/data/tilesets/terrain \
-    geodata/cesium-terrain-server`
+`docker run -p 8080:8000 -v /data/docker/tilesets/terrain:/data/tilesets/terrain \
+ geodata/cesium-terrain-server`
 
 Enter <http://localhost:8080/> in the web browser to visualise the served terrain using Cesium.
 
@@ -80,6 +80,9 @@ For bugs or issues, go to:  [Cesium Terrain Builder](https://github.com/geo-data
 Download the source code from: [Cesium-BISAG](https://github.com/narang99/cesium-bisag)
 
 ### USAGE
+
+
+
 
 
 
