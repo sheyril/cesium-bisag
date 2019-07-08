@@ -26,13 +26,13 @@ Install Cesium Terrain Builder and Cesium Terrain Server using Docker\
 Cesium Terrain Builder requirements:\
 	gdal version>=**2.0.0** installed on system\
 	gdal source developement header files\
-	Cmake should be available on the system\
+	Cmake should be available on the system
 
 Cesium Terrain server requirements:  
 	system should have [Go](https://golang.org/) installed as the server is written in Go.
 
 
-Setting up the terrain files for serving,\
+Setting up the terrain files for serving,
 
 If the folder system is like this:  
 
