@@ -1,20 +1,22 @@
 ## Cesium-BISAG
-**Experimentations with terrain elevation data for generating and serving 3D Tilesets**
+Experimentations with terrain elevation data for generating and serving 3D Tilesets
 
+
+### DESCRIPTION
 This tool allows the user to visualise 2D height maps in 3D using the CesiumJS library. 
 
 ### PREREQUISITES
 
-GeoServer v2.15.1
-QGIS v3.4
-pgAdmin4
-PostgreSQL v9.6
-PostGIS v2.3.9
-Docker 
-Go
-[Cesium Terrain Builder](https://github.com/geo-data/cesium-terrain-builder)
-[Cesium Terrain Server](https://github.com/geo-data/cesium-terrain-server)
-Node Package Manager (NPM)
+GeoServer v2.15.1\
+QGIS v3.4\
+pgAdmin4\
+PostgreSQL v9.6\
+PostGIS v2.3.9\
+Docker\ 
+Go\
+[Cesium Terrain Builder](https://github.com/geo-data/cesium-terrain-builder)\
+[Cesium Terrain Server](https://github.com/geo-data/cesium-terrain-server)\
+Node Package Manager (NPM)\
 JDBC Image Mosaic Plugin extention (compatible with the GeoServer version)
 
 #### Prerequisites Installation Guide:
@@ -78,6 +80,9 @@ For bugs or issues, go to:  [Cesium Terrain Builder](https://github.com/geo-data
 Download the source code from: [Cesium-BISAG](https://github.com/narang99/cesium-bisag)
 
 ### USAGE
+
+
+
 
 
 
