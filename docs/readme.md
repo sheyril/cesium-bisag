@@ -23,7 +23,7 @@ JDBC Image Mosaic Plugin extention (compatible with the GeoServer version)
 
 Exract the JDBC Image Mosaic plugin zip contents into the directory geoserver-2.15.1/webapps/geoserver/WEB-INF/lib \
 Install Cesium Terrain Builder and Cesium Terrain Server using Docker\
-Cesium Terrain Builder requirements:\
+Cesium Terrain Builder requirements:
 	gdal version>=**2.0.0** installed on system\
 	gdal source developement header files\
 	Cmake should be available on the system
