@@ -21,18 +21,18 @@ JDBC Image Mosaic Plugin extention (compatible with the GeoServer version)
 
 #### Prerequisites Installation Guide:
 
-Exract the JDBC Image Mosaic plugin zip contents into the directory geoserver-2.15.1/webapps/geoserver/WEB-INF/lib 
-Install Cesium Terrain Builder and Cesium Terrain Server using Docker
-Cesium Terrain Builder requirements:
-	gdal version>=**2.0.0** installed on system
-	gdal source developement header files
-	Cmake should be available on the system
+Exract the JDBC Image Mosaic plugin zip contents into the directory geoserver-2.15.1/webapps/geoserver/WEB-INF/lib \
+Install Cesium Terrain Builder and Cesium Terrain Server using Docker\
+Cesium Terrain Builder requirements:\
+	gdal version>=**2.0.0** installed on system\
+	gdal source developement header files\
+	Cmake should be available on the system\
 
-Cesium Terrain server requirements:
-	system should have [Go](https://golang.org/) installed as the server is written in Go
+Cesium Terrain server requirements:  
+	system should have [Go](https://golang.org/) installed as the server is written in Go.
 
 
-Setting up the terrain files for serving,
+Setting up the terrain files for serving,\
 
 If the folder system is like this:  
 
@@ -80,6 +80,9 @@ For bugs or issues, go to:  [Cesium Terrain Builder](https://github.com/geo-data
 Download the source code from: [Cesium-BISAG](https://github.com/narang99/cesium-bisag)
 
 ### USAGE
+
+
+
 
 
 
