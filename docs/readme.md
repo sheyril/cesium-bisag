@@ -1,8 +1,6 @@
 ## Cesium-BISAG
-Experimentations with terrain elevation data for generating and serving 3D Tilesets
+**Experimentations with terrain elevation data for generating and serving 3D Tilesets**
 
-
-### DESCRIPTION
 This tool allows the user to visualise 2D height maps in 3D using the CesiumJS library. 
 
 ### PREREQUISITES
