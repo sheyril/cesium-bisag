@@ -21,7 +21,7 @@ This tool allows the user to visualise 2D height maps in 3D using the CesiumJS l
 
 #### Prerequisites Installation Guide:
 
-Exract the JDBC Image Mosaic plugin zip contents into the directory `geoserver-2.15.1/webapps/geoserver/WEB-INF/lib \`
+Exract the JDBC Image Mosaic plugin zip contents into the directory `geoserver-2.15.1/webapps/geoserver/WEB-INF/lib`\
 Install Cesium Terrain Builder and Cesium Terrain Server using Docker\
 Cesium Terrain Builder requirements:
 * gdal version>=**2.0.0** installed on system
